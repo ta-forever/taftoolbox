@@ -12,8 +12,10 @@
 #include "rwe/tnt/TntArchive.h"
 #include "rwe/hpi/HpiArchive.h"
 
-std::string load(const ta::HpiEntry &hpiEntry)
+std::string rweHpiLoad(const ta::HpiEntry &hpiEntry)
 {
+    // map packs packed with a buggy version of HPIZ can't be opened by JoeD's hpiutil.dll.
+    // so instead we're going to use (a slightly modified version of) RWE's HpiArchive to actually load files.
     static std::shared_ptr<std::istream> fs;
     static std::shared_ptr<rwe::HpiArchive> hpi;
     static std::string hpiPath;
@@ -143,7 +145,7 @@ int main(int argc, char *argv[])
     std::map<std::string, std::uint32_t> crcByMap;
     if (parser.isSet("thumb") || parser.isSet("hash"))
     {
-        QVector<QRgb> palette = loadPalette(load(paletteFiles.at("palettes\\PALETTE.PAL")));
+        QVector<QRgb> palette = loadPalette(rweHpiLoad(paletteFiles.at("palettes\\PALETTE.PAL")));
         for (auto p : mapFiles)
         {
             QFileInfo fileInfo(p.second.fileName.c_str());
@@ -152,7 +154,7 @@ int main(int argc, char *argv[])
                 std::string data;
                 try
                 {
-                    data = load(p.second);
+                    data = rweHpiLoad(p.second);
                 }
                 catch (const std::exception &)
                 {
@@ -188,7 +190,7 @@ int main(int argc, char *argv[])
         if (fileInfo.suffix().toLower() == "ota")
         {
             std::uint32_t &crc = crcByMap[fileInfo.baseName().toStdString()];
-            std::string data = load(p.second);
+            std::string data = rweHpiLoad(p.second);
             if (parser.isSet("hash") || parser.isSet("details"))
             {
                 crc32.PartialCRC(&crc, (const std::uint8_t*)data.data(), data.size());
