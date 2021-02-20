@@ -282,47 +282,47 @@ int defaultInt(QString s, int default)
     return ok ? result : default;
 }
 
+std::ostream& operator<<(std::ostream& os, const QString& s)
+{
+    os << s.toStdString();
+    return os;
+}
+
 void sqlMap(std::ostream& os, const std::string& context, const ta::HpiEntry & hpiEntry, const ta::TdfFile& ota, std::uint32_t crc)
 {
     const int MAP_SIZE_SCALE_FACTOR = 1;
     try
     {
         std::ostringstream ss;
-        /*
-        REPLACE INTO faf.map  (display_name, map_type, battle_type) VALUES ('test map', 'FFA', 'skirmish');
-        */
         for (auto it = ota.children.begin(); it != ota.children.end(); ++it)
         {
-            ss << "REPLACE INTO faf.map(display_name, map_type, battle_type) VALUES";
-            auto tdfRootValues = it->second.values;
             QFileInfo hpiFileInfo(hpiEntry.hpiArchive.c_str());
             QStringList values;
             values.append(sqlQuote(QString(context.c_str())));
             values.append(sqlQuote(QString("FFA")));
             values.append(sqlQuote(QString("skirmish")));
-            ss << bracket(values.join(",")).toStdString() << ";\n";
+
+            ss << "INSERT INTO faf.map(display_name, map_type, battle_type) VALUES" << bracket(values.join(",")) << "\n";
+            ss << "ON DUPLICATE KEY UPDATE display_name=" << values[0] << ", map_type=" << values[1] << ", battle_type=" << values[2] << ";\n";
         }
 
-        /*
-        REPLACE INTO faf.map_version  (description, max_players, width, height, version, filename, ranked, hidden, map_id) VALUES
-        ('test map', 10, 512, 512, 3, 'test.hpi/test map/DEADBEFF', 1, 0, (select id from faf.map where display_name='test map'));
-        */
         for (auto it = ota.children.begin(); it != ota.children.end(); ++it)
         {
-            ss << "REPLACE INTO faf.map_version(description, max_players, width, height, version, filename, ranked, hidden, map_id) VALUES";
             auto tdfRootValues = it->second.values;
             QFileInfo hpiFileInfo(hpiEntry.hpiArchive.c_str());
             QStringList values;
             values.append(sqlQuote(QString::fromStdString(tdfRootValues["missiondescription"])));
             values.append(QString::number(defaultInt(QString(tdfRootValues["numplayers"].c_str()).split(",").back().trimmed(), 10)));
-            values.append(QString::number(MAP_SIZE_SCALE_FACTOR *defaultInt(QString(tdfRootValues["size"].c_str()).split("x").front().trimmed(), 16)));
-            values.append(QString::number(MAP_SIZE_SCALE_FACTOR *defaultInt(QString(tdfRootValues["size"].c_str()).split("x").back().trimmed(), 16)));
+            values.append(QString::number(MAP_SIZE_SCALE_FACTOR * defaultInt(QString(tdfRootValues["size"].c_str()).split("x").front().trimmed(), 16)));
+            values.append(QString::number(MAP_SIZE_SCALE_FACTOR * defaultInt(QString(tdfRootValues["size"].c_str()).split("x").back().trimmed(), 16)));
             values.append("@version");
-            values.append(sqlQuote(hpiFileInfo.fileName() + "/" + context.c_str() + "/" + QString::number(crc, 16)));
+            values.append(sqlQuote(hpiFileInfo.fileName() + "/" + context.c_str() + "/" + QString("%1").arg(crc, 8, 16, QChar('0'))));
             values.append("1");
             values.append("0");
             values.append("(SELECT id FROM faf.map WHERE display_name=" + sqlQuote(QString(context.c_str())) + ")");
-            ss << bracket(values.join(",")).toStdString() << ";\n";
+
+            ss << "INSERT INTO faf.map_version(description, max_players, width, height, version, filename, ranked, hidden, map_id) VALUES" << bracket(values.join(",")) << "\n";
+            ss << "ON DUPLICATE KEY UPDATE description=" << values[0] << ", max_players=" << values[1] << ", width=" << values[2] << ", height=" << values[3] << ", version=" << values[4] << ", filename=" << values[5] << ", ranked=" << values[6] << ", hidden=" << values[7] << ", map_id=" << values[8] << ";\n";
         }
 
         os << ss.str();
