@@ -1,3 +1,5 @@
+#include <algorithm>
+#include <set>
 #include <string>
 #include <fstream>
 
@@ -173,6 +175,11 @@ void HpiArchive::directory(std::map<std::string, HpiEntry> &entries, const std::
             entry.isDirectory = isDirectory;
             entry.size = size;
         }
+
+        if (isDirectory)
+        {
+            directory(entries, dirName + "\\" + fileName, match);
+        }
     }
 }
 
@@ -192,23 +199,53 @@ void IFile::get(void *dest, int offset, int bytecount)
     HPIGet(dest, m_handle, offset, bytecount);
 }
 
+bool iequals(const std::string& a, const std::string& b)
+{
+    return std::equal(a.begin(), a.end(), b.begin(),
+        [](char a, char b) {
+        return tolower(a) == tolower(b);
+    });
+}
+
 void HpiArchive::directory(
     std::map<std::string, HpiEntry> &entries,
-    const std::string &gamePath, const std::string &hpiGlobSpec,\
+    const std::string &gamePath, const std::string &hpiGlobSpec,
     const std::string &hpiSubDir, std::function<bool(const char*, bool)> match)
 {
-    std::string spec = gamePath + "\\" + hpiGlobSpec;
-    WIN32_FIND_DATA fd;
-    HANDLE sh = FindFirstFile(spec.c_str(), &fd);
-    if (sh == INVALID_HANDLE_VALUE)
+    // TA does this in alphabetical order
+    std::set<std::string> hpiFiles;
     {
-        return;
+        std::string spec = gamePath + "\\" + hpiGlobSpec;
+        WIN32_FIND_DATA fd;
+        HANDLE sh = FindFirstFile(spec.c_str(), &fd);
+        if (sh == INVALID_HANDLE_VALUE)
+        {
+            return;
+        }
+
+        do
+        {
+            std::string hpiFile(fd.cFileName);
+            std::transform(hpiFile.begin(), hpiFile.end(), hpiFile.begin(), [](char ch) { return ::tolower(ch); });
+            hpiFiles.insert(fd.cFileName);
+        }
+        while (FindNextFile(sh, &fd));
     }
 
-    do
+    int nrHpi = 0;
+    for (const std::string& hpiFile : hpiFiles)
     {
-        HpiArchive hpi(gamePath + "\\" + fd.cFileName);
+        if (hpiFile.length()>4 && iequals(hpiFile.substr(hpiFile.length()-4, 4), ".hpi"))
+        {
+            ++nrHpi;
+            if (nrHpi > 8)
+            {
+                // TA only loads the first 8 HPIs! go figure ....
+                //continue;
+            }
+        }
+
+        HpiArchive hpi(gamePath + "\\" + hpiFile);
         hpi.directory(entries, hpiSubDir, match);
     }
-    while (FindNextFile(sh, &fd));
 }

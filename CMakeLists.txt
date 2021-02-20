@@ -1,7 +1,7 @@
 project(taftoolbox)
 cmake_minimum_required(VERSION 3.16)
 
-find_package(Qt5 COMPONENTS Core Gui REQUIRED)
+find_package(Qt5 COMPONENTS Core Gui Widgets REQUIRED)
 
 #if(MSVC)
 #    add_compile_options(
@@ -25,6 +25,7 @@ target_link_libraries(maptool
     rwe
     nswf
     Qt5::Core
-    Qt5::Gui)
+    Qt5::Gui
+	Qt5::Widgets)
 
 install(TARGETS maptool)

@@ -94,15 +94,15 @@ namespace rwe
     public:
         explicit TntArchive(std::istream* _stream);
 
-        TntMinimapInfo readMinimap();
+        TntMinimapInfo readMinimap() const;
 
         void readTiles(std::function<void(const char*)> tileCallback);
 
-        void readFeatures(std::function<void(const std::string&)> featureCallback);
+        void readFeatures(std::function<void(const std::string&)> featureCallback) const;
 
         void readMapData(uint16_t* outputBuffer);
 
-        void readMapAttributes(TntTileAttributes* outputBuffer);
+        void readMapAttributes(TntTileAttributes* outputBuffer) const;
 
         const TntHeader& getHeader() const;
     };

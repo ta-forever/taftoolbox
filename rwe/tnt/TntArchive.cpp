@@ -36,7 +36,7 @@ namespace rwe
         }
     }
 
-    void TntArchive::readFeatures(std::function<void(const std::string&)> featureCallback)
+    void TntArchive::readFeatures(std::function<void(const std::string&)> featureCallback) const
     {
         stream->seekg(header.featuresOffset);
 
@@ -64,7 +64,7 @@ namespace rwe
         stream->read(reinterpret_cast<char*>(outputBuffer), (header.width / 2) * (header.height / 2) * sizeof(uint16_t));
     }
 
-    void TntArchive::readMapAttributes(TntTileAttributes* outputBuffer)
+    void TntArchive::readMapAttributes(TntTileAttributes* outputBuffer) const
     {
         stream->seekg(header.mapAttributesOffset);
         stream->read(reinterpret_cast<char*>(outputBuffer), header.width * header.height * sizeof(TntTileAttributes));
@@ -111,7 +111,7 @@ namespace rwe
         return newData;
     }
 
-    TntMinimapInfo TntArchive::readMinimap()
+    TntMinimapInfo TntArchive::readMinimap() const
     {
         stream->seekg(header.minimapOffset);
         auto minimapHeader = readRaw<TntMinimapHeader>(*stream);
