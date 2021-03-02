@@ -16,8 +16,13 @@
 #include "rwe/tnt/TntArchive.h"
 #include "rwe/hpi/HpiArchive.h"
 
+static bool VERBOSE = false;
+#define LOG_DEBUG(x) if (VERBOSE) { std::cout << x << std::endl; }
+
 std::string rweHpiLoad(const ta::HpiEntry &hpiEntry)
 {
+    LOG_DEBUG("[rweHpiLoad]" << hpiEntry.hpiArchive << ":" << hpiEntry.fileName);
+
     // map packs packed with a buggy version of HPIZ can't be opened by JoeD's hpiutil.dll.
     // so instead we're going to use (a slightly modified version of) RWE's HpiArchive to actually load files.
     static std::shared_ptr<std::istream> fs;
@@ -43,6 +48,7 @@ std::string rweHpiLoad(const ta::HpiEntry &hpiEntry)
 
 QVector<QRgb> loadPalette(const std::string &paletteFile)
 {
+    LOG_DEBUG("[loadPalette] paletteFile.size()=" << paletteFile.size());
     const QRgb *abgr = (const QRgb*)paletteFile.data();
     int N = paletteFile.size() / 4u;
 
@@ -68,16 +74,53 @@ void ImageBufferCleanup(void *buf)
 
 QImage readMiniMap(const rwe::TntArchive& tnt)
 {
+    LOG_DEBUG("[readMiniMap] tnt:" << tnt.getHeader().width << 'x' << tnt.getHeader().height);
     rwe::TntMinimapInfo minimap = tnt.readMinimap();
-
     std::vector<char> *buf = new std::vector<char>(minimap.data);
-    return QImage((std::uint8_t*)buf->data(), minimap.width, minimap.height, minimap.width, QImage::Format_Indexed8, &ImageBufferCleanup, buf);
+
+    int miniHeight = minimap.height, miniWidth = minimap.width;
+    LOG_DEBUG("  minimap:" << miniWidth << 'x' << miniHeight);
+    {
+        const char MAGIC_END(9);
+        std::vector<bool> isRowAllMAGICEND(minimap.height, true);
+        std::vector<bool> isColAllMAGICEND(minimap.width, true);
+        for (std::size_t n = 0u; n < buf->size(); ++n)
+        {
+            std::size_t x = n % minimap.width;
+            std::size_t y = n / minimap.width;
+            if (buf->at(n) != MAGIC_END)
+            {
+                isColAllMAGICEND[x] = isRowAllMAGICEND[y] = false;
+
+            }
+        }
+
+        auto itLastRowNotMAGICEND = std::find(isRowAllMAGICEND.rbegin(), isRowAllMAGICEND.rend(), false);
+        if (itLastRowNotMAGICEND != isRowAllMAGICEND.rend() && itLastRowNotMAGICEND != isRowAllMAGICEND.rbegin())
+        {
+            std::size_t ofsRealMiniHeight = std::distance(isRowAllMAGICEND.begin(), itLastRowNotMAGICEND.base());
+            miniHeight = ofsRealMiniHeight;
+        }
+
+        auto itLastColNotMAGICEND = std::find(isColAllMAGICEND.rbegin(), isColAllMAGICEND.rend(), false);
+        if (itLastColNotMAGICEND != isColAllMAGICEND.rend() && itLastColNotMAGICEND != isColAllMAGICEND.rbegin())
+        {
+            std::size_t ofsRealMiniWidth = std::distance(isColAllMAGICEND.begin(), itLastColNotMAGICEND.base());
+            miniWidth = ofsRealMiniWidth;
+        }
+    }
+    LOG_DEBUG("  minimap(adjusted):" << miniWidth << 'x' << miniHeight);
+
+    QImage im((std::uint8_t*)buf->data(), miniWidth, miniHeight, minimap.width, QImage::Format_Indexed8, &ImageBufferCleanup, buf);
+    LOG_DEBUG("  image:" << im.width() << 'x' << im.height());
+    return im;
 }
 
 std::vector<std::uint8_t> readHeightMap(const rwe::TntArchive& tnt)
 {
     const int width = tnt.getHeader().width;
     const int height = tnt.getHeader().height;
+    LOG_DEBUG("[readHeightMap] tnt:" << width << 'x' << height);
     std::vector<rwe::TntTileAttributes> tileAttributes(width * height);
     tnt.readMapAttributes(tileAttributes.data());
 
@@ -89,6 +132,7 @@ std::vector<std::uint8_t> readHeightMap(const rwe::TntArchive& tnt)
 
 std::vector<std::uint8_t> lowpass(const std::vector<std::uint8_t> &data, int width, int height, int radius)
 {
+    LOG_DEBUG("[lowpass]");
     std::vector<std::uint8_t> result(data);
     for (int x = 0; x < width; ++x)
     {
@@ -122,6 +166,7 @@ std::vector<std::uint8_t> lowpass(const std::vector<std::uint8_t> &data, int wid
 
 void meanStdev(const std::vector<std::uint8_t>& data, double &mean, double &stdev)
 {
+    LOG_DEBUG("[meanStdev]");
     if (data.size() > 0)
     {
         double sum = std::accumulate(data.begin(), data.end(), 0.0, [](double a, std::uint8_t x) { return a + double(x); });
@@ -141,6 +186,7 @@ QImage createHeightMapImage(const rwe::TntArchive& tnt)
 {
     const int width = tnt.getHeader().width;
     const int height = tnt.getHeader().height;
+    LOG_DEBUG("[createHeightMapImage] tnt:" << width << 'x' << height);
     std::vector<std::uint8_t> heights = readHeightMap(tnt);
     std::vector<std::uint8_t> lpfHeights = lowpass(heights, width, height, 3);
     
@@ -178,6 +224,7 @@ IteratorT findClosest(int x, int y, IteratorT beginNode, IteratorT endNode)
 template<typename IteratorT>
 void voronoiLines(QImage& im, IteratorT beginNode, IteratorT endNode, QColor plotColor)
 {
+    LOG_DEBUG("[voronoiLines]");
     QPainter painter(&im);
     for (int x = 0; x < im.width(); ++x)
     {
@@ -194,8 +241,6 @@ void voronoiLines(QImage& im, IteratorT beginNode, IteratorT endNode, QColor plo
         }
     }
 }
-
-
 
 bool isSkirmishMap(const ta::TdfFile& ota)
 {
@@ -336,6 +381,7 @@ void sqlMap(std::ostream& os, const std::string& context, const ta::HpiEntry & h
 
 const ta::TdfFile* getSchema(const ta::TdfFile& root, const std::string &type)
 {
+    LOG_DEBUG("[getSchema] values=" << root.values.size() << ", children=" << root.children.size() << ", type=" << type);
     int schemaCount = std::atoi(root.getValue("schemacount", "0").c_str());
 
     for (int i = 0; i < schemaCount; ++i)
@@ -349,44 +395,123 @@ const ta::TdfFile* getSchema(const ta::TdfFile& root, const std::string &type)
     return NULL;
 }
 
-std::vector< std::pair<int, int> > getStartingPositions(const ta::TdfFile &ota, int maxPositions)
+std::vector< std::pair<int, int> > getSchemaStartingPositions(const ta::TdfFile& schema)
 {
-    std::vector< std::pair<int, int> > startPositions(min(10,maxPositions));
-    std::fill(startPositions.begin(), startPositions.end(), std::pair<int, int>(0, 0));
+    LOG_DEBUG("[getSchemaStartingPositions] values=" << schema.values.size() << ", children=" << schema.children.size());
+    int MAX_START_POSITIONS = 10;
+    std::vector< std::pair<int, int> > startPositions(MAX_START_POSITIONS, std::pair<int,int>(0,0));
 
-    for (auto& pairRoot : ota.children)
+    int schemaStartPositions = 0;
+    for (int nSpecial = 0;; ++nSpecial)
     {
-        const ta::TdfFile* schema = getSchema(pairRoot.second, "network");
-        if (schema)
+        const ta::TdfFile& special = schema.getChild("specials").getChild("special" + std::to_string(nSpecial));
+        if (special.values.empty())
         {
-            for(int nSpecial=0;; ++nSpecial)
-            {
-                const ta::TdfFile& special = schema->getChild("specials").getChild("special" + std::to_string(nSpecial));
-                if (special.values.empty())
-                {
-                    break;
-                }
+            break;
+        }
 
-                if (special.getValue("specialwhat", "").rfind("startpos") == 0)
+        if (special.getValue("specialwhat", "").rfind("startpos") == 0)
+        {
+            int positionNumber = std::atoi(special.getValue("specialwhat", "").substr(std::string("startpos").size()).c_str());
+            int x = std::atoi(special.getValue("xpos", "-1").c_str());
+            int y = std::atoi(special.getValue("zpos", "-1").c_str());
+            if (positionNumber > 0 && positionNumber <= MAX_START_POSITIONS && x >= 0 && y >= 0)
+            {
+                startPositions[positionNumber - 1] = std::pair<int, int>(x / 16, y / 16);
+                if (positionNumber > schemaStartPositions)
                 {
-                    int positionNumber = std::atoi(special.getValue("specialwhat", "").substr(std::string("startpos").size()).c_str());
-                    int x = std::atoi(special.getValue("xpos", "-1").c_str());
-                    int y = std::atoi(special.getValue("zpos", "-1").c_str());
-                    if (positionNumber > 0 && positionNumber <= maxPositions && x>=0 && y>=0)
-                    {
-                        startPositions[positionNumber - 1] = std::pair<int, int>(x/16, y/16);
-                    }
+                    schemaStartPositions = positionNumber;
                 }
             }
         }
     }
+    startPositions.resize(schemaStartPositions);
     return startPositions;
 }
 
-std::vector<std::tuple<int, int, int> > findFeatures(const rwe::TntArchive& tnt, const ta::TdfFile& ota, const ta::TdfFile& featureLibrary, const std::string& matchKey, const std::string& matchValue, const std::string& valueKey)
+void appendSchemaFeatures(const ta::TdfFile& schema, std::vector< std::tuple<int, int, std::string> > &features)
 {
-    std::vector<std::tuple<int, int, int> > matchingFeatures;
+    LOG_DEBUG("[appendSchemaFeatures] values=" << schema.values.size() << ", children=" << schema.children.size() << ", features=" << features.size());
+    for (int nFeature = 0;; ++nFeature)
+    {
+        const ta::TdfFile& feature = schema.getChild("features").getChild("feature" + std::to_string(nFeature));
+        if (feature.values.empty())
+        {
+            break;
+        }
 
+        std::string featureName = feature.getValue("featurename", "");
+        int x = std::atoi(feature.getValue("xpos", "-1").c_str());
+        int y = std::atoi(feature.getValue("zpos", "-1").c_str());
+        if (featureName.size()>0 && x>=0 && y>=0)
+        {
+            features.push_back(std::tuple<int, int, std::string>(x, y, featureName));
+        }
+    }
+}
+
+const ta::TdfFile* getSchemaForPositionCount(const ta::TdfFile& ota, int positionCount, std::vector< std::pair<int,int> > *optionalStartingPositions)
+{
+    LOG_DEBUG("[getSchemaForPositionCount] values=" << ota.values.size() << ", children=" << ota.children.size() << ", positionCount=" << positionCount << ", optionalStartingPositons=" << optionalStartingPositions);
+    std::size_t sizeLargestSchema = 0;
+    const ta::TdfFile* largestSchema = NULL;
+
+    for (auto& pairRoot : ota.children)
+    {
+        for (int nNetwork = 1;; ++nNetwork)
+        {
+            std::ostringstream ss;
+            ss << "network " << nNetwork;
+            const ta::TdfFile* schema = getSchema(pairRoot.second, ss.str());
+            if (!schema)
+            {
+                break;
+            }
+            auto startPositions = getSchemaStartingPositions(*schema);
+            if (startPositions.size() == positionCount)
+            {
+                if (optionalStartingPositions)
+                {
+                    *optionalStartingPositions = startPositions;
+                }
+                return schema;
+            }
+            if (startPositions.size() >= sizeLargestSchema)
+            {
+                sizeLargestSchema = startPositions.size();
+                largestSchema = schema;
+                if (optionalStartingPositions)
+                {
+                    *optionalStartingPositions = startPositions;
+                }
+
+            }
+        }
+    }
+    return largestSchema;
+}
+
+std::vector< std::pair<int, int> > getStartingPositions(const ta::TdfFile &ota, int positionCount)
+{
+    LOG_DEBUG("[getStartingPositions] values=" << ota.values.size() << ", children=" << ota.children.size() << ", positionCount=" << positionCount);
+    std::vector< std::pair<int, int> > startPositions;
+    getSchemaForPositionCount(ota, positionCount, &startPositions);
+    return startPositions;
+}
+
+void appendOtaFileFeatures(const ta::TdfFile& ota, int positionCount, std::vector< std::tuple<int, int, std::string> > &features)
+{
+    LOG_DEBUG("[appendOtaFileFeatures]");
+    const ta::TdfFile *schema = getSchemaForPositionCount(ota, positionCount, NULL);
+    if (schema)
+    {
+        appendSchemaFeatures(*schema, features);
+    }
+}
+
+void appendTntFileFeatures(const rwe::TntArchive& tnt, std::vector< std::tuple<int, int, std::string> > &features)
+{
+    LOG_DEBUG("[appendTntFileFeatures]");
     int width = tnt.getHeader().width;
     int height = tnt.getHeader().height;
     std::vector<rwe::TntTileAttributes> tileAttributes(width * height);
@@ -398,30 +523,44 @@ std::vector<std::tuple<int, int, int> > findFeatures(const rwe::TntArchive& tnt,
     });
     //std::for_each(mapFeatures.begin(), mapFeatures.end(), [](std::string s) { std::cout << "mapfeature:" << s << std::endl; });
 
-    for (int n = 0; n < tileAttributes.size(); ++n)
+    for (unsigned n = 0u; n < tileAttributes.size(); ++n)
     {
-        int x = n % width;
-        int y = n / width;
+        unsigned x = n % width;
+        unsigned y = n / width;
         if (tileAttributes[n].feature < mapFeatures.size())
         {
-            const ta::TdfFile& feature = featureLibrary.getChild(mapFeatures[tileAttributes[n].feature]);
-            if (feature.getValue(matchKey, "") == matchValue)
+            std::string featureName = mapFeatures[tileAttributes[n].feature];
+            features.push_back(std::tuple<int, int, std::string>(x, y, featureName));
+        }
+    }
+}
+
+std::vector<std::tuple<int, int, int> > lookupFeatureValues(const std::vector< std::tuple<int, int, std::string> > &mapFeatures, const ta::TdfFile& featureLibrary, const std::string& matchKey, const std::string& matchValue, const std::string& valueKey)
+{
+    LOG_DEBUG("[lookupFeatureValues] matchKey=" << matchKey << ", matchValue=" << matchValue << ", valueKey=" << valueKey);
+    std::vector<std::tuple<int, int, int> > matchingFeatureValues;
+    for (const std::tuple<int, int, std::string> &featureTuple: mapFeatures)
+    {
+        int x = std::get<0>(featureTuple);
+        int y = std::get<1>(featureTuple);
+        const std::string& featureName = std::get<2>(featureTuple);
+        const ta::TdfFile& featureData = featureLibrary.getChild(featureName);
+        if (featureData.getValue(matchKey, "") == matchValue)
+        {
+            std::string valueString = featureData.getValue(valueKey, "");
+            if (!valueString.empty())
             {
-                std::string valueString = feature.getValue(valueKey, "");
-                if (!valueString.empty())
-                {
-                    int value = std::atoi(valueString.c_str());
-                    matchingFeatures.push_back(std::tuple<int, int, int>(x, y, value));
-                }
+                int value = std::atoi(valueString.c_str());
+                matchingFeatureValues.push_back(std::tuple<int, int, int>(x, y, value));
             }
         }
     }
-
-    return matchingFeatures;
+    return matchingFeatureValues;
 }
 
 std::vector<int> voronoiAccumulateFeatures(const std::vector<std::tuple<int, int, int> > &featuresXYValue, const std::vector<std::pair<int, int> >& nodes)
 {
+    LOG_DEBUG("[voronoiAccumulateFeatures]");
     std::vector<int> areaValues(nodes.size(), 0);
     for (const std::tuple<int,int,int> &xyVal: featuresXYValue)
     {
@@ -436,6 +575,7 @@ std::vector<int> voronoiAccumulateFeatures(const std::vector<std::tuple<int, int
 
 std::vector<double> weightedVoronoiAccumulateFeatures(const std::vector<std::tuple<int, int, int> >& featuresXYValue, const std::vector<std::pair<int, int> >& nodes)
 {
+    LOG_DEBUG("[weightedVoronoiAccumulateFeatures]");
     std::vector<double> sumValues(nodes.size(), 0);
 
     for (const std::tuple<int, int, int>& xyVal : featuresXYValue)
@@ -505,6 +645,7 @@ void drawText(QPainter& painter, int x, int y, int size, QString text, Qt::Globa
 
 double resize(QImage& im, int nominalSize)
 {
+    LOG_DEBUG("[resize(QImage)]");
     int currentSize = max(im.width(), im.height());
     double scale = double(nominalSize) / double(currentSize);
 
@@ -512,8 +653,9 @@ double resize(QImage& im, int nominalSize)
     return scale;
 }
 
-QImage createPositionsMapImage(const rwe::TntArchive& tnt, const ta::TdfFile& ota, QVector<uint> palette, int nominalSize)
+QImage createPositionsMapImage(const rwe::TntArchive& tnt, const ta::TdfFile& ota, QVector<uint> palette, int positionCount, int nominalSize)
 {
+    LOG_DEBUG("[createPositionsMapImage]");
     QImage im;
     im = readMiniMap(tnt);
     double scale = double(im.width()) / double(tnt.getHeader().width);
@@ -523,12 +665,14 @@ QImage createPositionsMapImage(const rwe::TntArchive& tnt, const ta::TdfFile& ot
 
     QPainter painter(&im);
 
-    const std::vector< std::pair<int, int> > startPositions = getStartingPositions(ota, 10);
+    const std::vector< std::pair<int, int> > startPositions = getStartingPositions(ota, positionCount);
 
     int positionNumber = startPositions.size();
     for (auto it=startPositions.rbegin(); it!=startPositions.rend(); ++it, --positionNumber)
     {
-        drawLabel(painter, int(scale* it->first+0.5), int(scale* it->second+0.5), 20, QString::number(positionNumber), Qt::darkBlue, Qt::white);
+        Qt::GlobalColor back = positionNumber <= positionCount ? Qt::darkBlue : Qt::gray;
+        Qt::GlobalColor fore = positionNumber <= positionCount ? Qt::white : Qt::black;
+        drawLabel(painter, int(scale* it->first+0.5), int(scale* it->second+0.5), 20, QString::number(positionNumber), back, fore);
     }
 
     return im;
@@ -606,6 +750,7 @@ QString engineeringNotation(double x)
 
 std::vector<std::tuple<int, int, int> > normaliseFeatures(const std::vector<std::tuple<int, int, int> >& features)
 {
+    LOG_DEBUG("[normaliseFeatures]");
     if (features.empty())
     {
         return features;
@@ -629,20 +774,30 @@ std::vector<std::tuple<int, int, int> > normaliseFeatures(const std::vector<std:
     return normalisedFeatures;
 }
 
-QImage createResourceMapImage(const rwe::TntArchive& tnt, const ta::TdfFile& ota, const ta::TdfFile& allFeatures, int maxPositions, Qt::GlobalColor background, Qt::GlobalColor foreground,
+QImage createResourceMapImage(const rwe::TntArchive& tnt, const ta::TdfFile& ota, const ta::TdfFile& featureLibrary, int maxPositions, Qt::GlobalColor background, Qt::GlobalColor foreground,
     const std::string &matchKey, const std::string &matchValue, const std::string &valueKey, int resourceScaleFactor, int nominalSize)
 {
+    LOG_DEBUG("[createResourceMapImage] matchKey=" << matchKey << ", matchValue=" << matchValue << ", valueKey=" << valueKey);
+
+    Qt::GlobalColor summaryColour = foreground; // Qt::GlobalColor(int(Qt::transparent) - int(foreground));
     QImage im = createHeightMapImage(tnt);
     double scale = resize(im, nominalSize);
 
-    const std::vector<std::pair<int, int> > startPositions = getStartingPositions(ota, maxPositions);
+    std::vector<std::pair<int, int> > startPositions = getStartingPositions(ota, maxPositions);
+    if (startPositions.size() > unsigned(maxPositions))
+    {
+        startPositions.resize(maxPositions);
+    }
     {
         std::vector<std::pair<int, int> > scaledStartPositions;
         std::transform(startPositions.begin(), startPositions.end(), std::back_inserter(scaledStartPositions), [scale](const std::pair<int, int>& x) {return std::pair<int, int>(int(0.5 + x.first * scale), int(0.5 + x.second * scale)); });
-        voronoiLines(im, scaledStartPositions.begin(), scaledStartPositions.end(), foreground);
+        voronoiLines(im, scaledStartPositions.begin(), scaledStartPositions.end(), summaryColour);
     }
 
-    auto matchingFeatures = findFeatures(tnt, ota, allFeatures, matchKey, matchValue, valueKey);
+    std::vector< std::tuple<int, int, std::string> > mapFeatures;
+    appendTntFileFeatures(tnt, mapFeatures);
+    appendOtaFileFeatures(ota, maxPositions, mapFeatures);
+    auto matchingFeatures = lookupFeatureValues(mapFeatures, featureLibrary, matchKey, matchValue, valueKey);
     auto normalisedMatchingFeatures = normaliseFeatures(matchingFeatures);
     auto areaValues = voronoiAccumulateFeatures(matchingFeatures, startPositions);
     //auto areaValues = weightedVoronoiAccumulateFeatures(matchingFeatures, startPositions);
@@ -664,7 +819,7 @@ QImage createResourceMapImage(const rwe::TntArchive& tnt, const ta::TdfFile& ota
         int y = startPositions[n].second;
         double v = double(areaValues[n]) / double(resourceScaleFactor);
         QString value = engineeringNotation(v);
-        drawText(painter, scale * x, scale * y, 30, value, Qt::black, foreground);
+        drawText(painter, scale * x, scale * y, 30, value, Qt::black, summaryColour);
     }
 
     return im;
@@ -672,6 +827,7 @@ QImage createResourceMapImage(const rwe::TntArchive& tnt, const ta::TdfFile& ota
 
 QImage createMapImage(const rwe::TntArchive& tnt, const ta::TdfFile& ota, const ta::TdfFile& allFeatures, QVector<uint> palette, QString type, int maxPositions, int nominalSize)
 {
+    LOG_DEBUG("[createMapImage] type=" << type.toStdString() << ", maxPositions=" << maxPositions << ", nominalSize=" << nominalSize);
     QImage im;
     if (type == "mini")
     {
@@ -681,7 +837,7 @@ QImage createMapImage(const rwe::TntArchive& tnt, const ta::TdfFile& ota, const 
     }
     else if (type == "positions")
     {
-        return createPositionsMapImage(tnt, ota, palette, nominalSize);
+        return createPositionsMapImage(tnt, ota, palette, maxPositions, nominalSize);
     }
     else if (type == "mexes")
     {
@@ -718,6 +874,7 @@ bool isInterestingFeature(const ta::TdfFile& tdf)
 
 std::map<QString,QImage> createMapImages(const std::string& tntData, const std::string& otaData, const ta::TdfFile& allFeatures, QVector<uint> palette, QStringList types, int maxPositions, int nominalSize)
 {
+    LOG_DEBUG("[createMapImages]");
     std::istringstream ss(tntData);
     rwe::TntArchive tnt(&ss);
     ta::TdfFile ota(otaData, 10);
@@ -726,7 +883,7 @@ std::map<QString,QImage> createMapImages(const std::string& tntData, const std::
 
     for (QString type : types)
     {
-        if (type == "mini" || type == "positions")
+        if (type == "mini")
         {
             images[type] = createMapImage(tnt, ota, allFeatures, palette, type, 10, nominalSize);
         }
@@ -741,6 +898,7 @@ std::map<QString,QImage> createMapImages(const std::string& tntData, const std::
 
 void saveMapImages(QFileInfo mapFileInfo, QString directory, const std::map<QString, QImage>& images)
 {
+    LOG_DEBUG("[saveMapImages] mapFileInfo=" << mapFileInfo.fileName().toStdString() << ", directory=" << directory.toStdString());
     QString fileNameEncoded = mapFileInfo.baseName();
     fileNameEncoded.replace(" ", "%20");
     fileNameEncoded.replace("[", "%5b");
@@ -758,15 +916,23 @@ void saveMapImages(QFileInfo mapFileInfo, QString directory, const std::map<QStr
         }
 
         QString pngFileName = directory + "/" + previewType + "/" + fileNameEncoded + ".png";
+        LOG_DEBUG("[saveMapImages] pngFileName=" << pngFileName.toStdString());
         image.save(pngFileName);
     }
 }
 
 int main(int argc, char *argv[])
 {
-    NSWFL::Hashing::CRC32 crc32;
-    crc32.Initialize();
-    ta::init();
+    for (int i = 0; i < argc; ++i)
+    {
+        if (std::string(argv[i]) == "--verbose")
+        {
+            VERBOSE = true;
+            break;
+        }
+    }
+    LOG_DEBUG("--- app start");
+    ta::init(VERBOSE);
 
     QApplication app(argc, argv);
     QApplication::setApplicationName("MapTool");
@@ -784,7 +950,11 @@ int main(int argc, char *argv[])
     parser.addOption(QCommandLineOption("thumbsize", "nominal size of thumbnail image.", "thumbsize", "375"));
     parser.addOption(QCommandLineOption("sql", "output map info in SQL format suitable for insertion into TAF DB.  argument specifies map version to use."));
     parser.addOption(QCommandLineOption("featurescachedir", "load TA features and cache them for future use when generating thumbnails", "featurescachedir"));
+    parser.addOption(QCommandLineOption("verbose", "spit out some debugging information"));
     parser.process(app);
+
+    NSWFL::Hashing::CRC32 crc32;
+    crc32.Initialize();
 
     std::map<std::string, ta::HpiEntry> mapFiles;
     std::map<std::string, ta::HpiEntry> paletteFiles;
@@ -800,6 +970,7 @@ int main(int argc, char *argv[])
             parser.value("thumbtypes").contains("rocks") ||
             parser.value("thumbtypes").contains("trees"));
 
+    LOG_DEBUG("--- inspecting hpi archives ...");
     for (QString hpiSpec : parser.value("hpispecs").split(';'))
     {
         ta::HpiArchive::directory(mapFiles, parser.value("gamepath").toStdString(), hpiSpec.toStdString(), "maps",
@@ -828,6 +999,7 @@ int main(int argc, char *argv[])
     ta::TdfFile allFeatures;
     if (doLoadFeatures)
     {
+        LOG_DEBUG("--- calculating feature files CRC ...");
         std::uint32_t crcFeatureFiles(-1);
         for (const auto& p : featureFiles)
         {
@@ -838,10 +1010,12 @@ int main(int argc, char *argv[])
         QString allFeaturesCacheFile(parser.value("featurescachedir") + "/" + "tafeatures." + QString::number(crcFeatureFiles, 16));
         if (QFile(allFeaturesCacheFile).exists())
         {
+            LOG_DEBUG("--- loading cached features. filename=" << allFeaturesCacheFile.toStdString());
             allFeatures.deserialise(std::ifstream(allFeaturesCacheFile.toStdString(), std::ios::binary));
         }
         else
         {
+            LOG_DEBUG("--- loading features from hpi archives ...");
             for (const auto& p : featureFiles)
             {
                 QFileInfo fileInfo(p.second.fileName.c_str());
@@ -849,27 +1023,28 @@ int main(int argc, char *argv[])
                 try
                 {
                     tdfData = rweHpiLoad(p.second);
-                }
-                catch (const std::exception&)
-                {
-                    //std::cerr << e.what() << std::endl;
-                    continue;
-                }
-                ta::TdfFile features(tdfData, 1);
-                for (const auto& f : features.children)
-                {
-                    //if (QString(f.first.c_str()).compare("landmetal03", Qt::CaseInsensitive) == 0)
-                    //{
-                    //    f.second.dumpjson(std::cout);
-                    //}
-                    if (isInterestingFeature(f.second))
+
+                    LOG_DEBUG("  parsing features");
+                    ta::TdfFile features(tdfData, 1);
+
+                    LOG_DEBUG("  filtering for interesting features");
+                    for (const auto& f : features.children)
                     {
-                        allFeatures.children[f.first] = f.second;
+                        if (isInterestingFeature(f.second))
+                        {
+                            allFeatures.children[f.first] = f.second;
+                        }
                     }
+                }
+                catch (const std::exception& e)
+                {
+                    LOG_DEBUG("  exception loading/parsing file:" << e.what());
+                    continue;
                 }
             }
             if (parser.isSet("featurescachedir"))
             {
+                LOG_DEBUG("--- saving features to cache. filename=" << allFeaturesCacheFile.toStdString() << ", values:" << allFeatures.values.size() << ", children:" << allFeatures.children.size());
                 allFeatures.serialise(std::ofstream(allFeaturesCacheFile.toStdString(), std::ios::binary));
             }
         }
@@ -879,6 +1054,7 @@ int main(int argc, char *argv[])
     if (parser.isSet("thumb") || doHash)
     {
         std::map<QString, std::string> otaFileNameLookup;
+        LOG_DEBUG("--- populating otaFileNameLookup");
         for (const auto& p : mapFiles)
         {
             QFileInfo fileInfo(p.second.fileName.c_str());
@@ -894,54 +1070,51 @@ int main(int argc, char *argv[])
             QFileInfo fileInfo(p.second.fileName.c_str());
             if (fileInfo.suffix().toLower() == "tnt")
             {
+                LOG_DEBUG("--- processing map file " << p.second.fileName);
                 std::string otaFileName = otaFileNameLookup[fileInfo.baseName()];
                 std::string tntData, otaData;
                 try
                 {
                     tntData = rweHpiLoad(p.second);
                     otaData = rweHpiLoad(mapFiles.at(otaFileName));
-                }
-                catch (const std::exception &)
-                {
-                    //std::cerr << e.what() << std::endl;
-                    continue;
-                }
 
-                {
-                    std::ofstream ofs("d:\\temp\\map.tnt", std::ios::binary);
-                    ofs << tntData;
-                }
-                {
-                    std::ofstream ofs("d:\\temp\\map.ota", std::ios::binary);
-                    ofs << otaData;
-                }
-
-                if (doHash)
-                {
-                    std::uint32_t crc(-1);
-                    crc32.PartialCRC(&crc, (const std::uint8_t*)tntData.data(), tntData.size());
-                    crcByMap[fileInfo.baseName().toStdString()] = crc;
-                }
-                if (parser.isSet("thumb"))
-                {
-                    if (palette.isEmpty())
+                    if (doHash)
                     {
-                        try
+                        LOG_DEBUG("  calculating .tnt part of CRC");
+                        std::uint32_t crc(-1);
+                        crc32.PartialCRC(&crc, (const std::uint8_t*)tntData.data(), tntData.size());
+                        crcByMap[fileInfo.baseName().toStdString()] = crc;
+                    }
+                    if (parser.isSet("thumb"))
+                    {
+                        if (palette.isEmpty())
                         {
-                            palette = loadPalette(rweHpiLoad(paletteFiles.at("palettes\\PALETTE.PAL")));
-                        }
-                        catch (std::out_of_range&)
-                        {
-                            palette.resize(256);
-                            for (std::uint32_t n = 0u; n < 256u; ++n)
+                            try
                             {
-                                palette[n] = n | (n << 8) | (n << 16);
+                                LOG_DEBUG("  loading palette");
+                                palette = loadPalette(rweHpiLoad(paletteFiles.at("palettes\\PALETTE.PAL")));
+                            }
+                            catch (std::out_of_range&)
+                            {
+                                LOG_DEBUG("  out_of_range loading palette");
+                                palette.resize(256);
+                                for (std::uint32_t n = 0u; n < 256u; ++n)
+                                {
+                                    palette[n] = n | (n << 8) | (n << 16);
+                                }
                             }
                         }
-                    }
 
-                    auto images = createMapImages(tntData, otaData, allFeatures, palette, parser.value("thumbtypes").split(','), parser.value("maxpositions").toInt(), parser.value("thumbsize").toInt());
-                    saveMapImages(fileInfo, parser.value("thumb"), images);
+                        LOG_DEBUG("  generating map images");
+                        auto images = createMapImages(tntData, otaData, allFeatures, palette, parser.value("thumbtypes").split(','), parser.value("maxpositions").toInt(), parser.value("thumbsize").toInt());
+                        LOG_DEBUG("  saving map images");
+                        saveMapImages(fileInfo, parser.value("thumb"), images);
+                    }
+                }
+                catch (const std::exception & e)
+                {
+                    LOG_DEBUG("exception processing map file " << p.second.hpiArchive << '/' << p.second.fileName << ":" << e.what());
+                    continue;
                 }
             }
         }
@@ -956,23 +1129,28 @@ int main(int argc, char *argv[])
             bool isSkirmish = isSkirmishMap(data);
             if (!isSkirmish)
             {
+                LOG_DEBUG("  not a skirmish map. ignoring");
                 continue;
             }
 
             std::uint32_t &crc = crcByMap[fileInfo.baseName().toStdString()];
             if (doHash)
             {
+                LOG_DEBUG("  calculating .ota part of CRC");
                 crc32.PartialCRC(&crc, (const std::uint8_t*)data.data(), data.size());
                 crc ^= -1;
             }
 
+            LOG_DEBUG("  parsing .ota file");
             ta::TdfFile tdf(data, 1);
             if (parser.isSet("sql"))
             {
+                LOG_DEBUG("  listing file (sql)");
                 sqlMap(std::cout, fileInfo.baseName().toStdString(), p.second, tdf, crc);
             }
             else
             {
+                LOG_DEBUG("  listing file (delimited text)");
                 lsMap(std::cout, fileInfo.baseName().toStdString(), p.second, tdf, doHash ? crc : 0u);
             }
         }

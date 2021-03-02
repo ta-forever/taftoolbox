@@ -12,7 +12,7 @@ namespace ta
 {
     class HpiArchive;
 
-    void init();
+    void init(bool verbose);
 
     class HpiEntry
     {

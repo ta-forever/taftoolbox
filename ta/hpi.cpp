@@ -2,6 +2,7 @@
 #include <set>
 #include <string>
 #include <fstream>
+#include <iostream>
 
 #include "hpi.h"
 
@@ -23,6 +24,7 @@ typedef LRESULT(WINAPI *THPIAddFileFromMemory) (void *Pack, LPSTR HPIName, LPSTR
 typedef LRESULT(WINAPI *THPIPackArchive) (void *Pack, int CMethod);
 typedef LRESULT(WINAPI *THPIPackFile) (void *Pack);
 
+static bool VERBOSE = false;
 static HMODULE dll = 0;
 static TGetTADirectory GetTADirectory = 0;
 static THPIOpen HPIOpen = 0;
@@ -40,8 +42,14 @@ static THPIAddFileFromMemory HPIAddFileFromMemory = 0;
 static THPIPackArchive HPIPackArchive = 0;
 static THPIPackFile HPIPackFile = 0;
 
-void ta::init()
+void ta::init(bool verbose)
 {
+    VERBOSE = verbose;
+    if (VERBOSE)
+    {
+        std::cout << "[ta::init]" << std::endl;
+    }
+
     if (dll == 0)
     {
         dll = LoadLibrary("hpiutil.dll");
@@ -123,6 +131,10 @@ HpiArchive::HpiArchive(const std::string &path):
 m_handle(HPIOpen(path.c_str())),
 m_hpiPath(path)
 {
+    if (VERBOSE)
+    {
+        std::cout << "[HpiArchive::HpiArchive] path=" << path << std::endl;
+    }
     if (m_handle == 0)
     {
         throw std::runtime_error("[HpiArchive::HpiArchive] unable to open archive at path " + path);
@@ -131,6 +143,10 @@ m_hpiPath(path)
 
 HpiArchive::~HpiArchive()
 {
+    if (VERBOSE)
+    {
+        std::cout << "[HpiArchive::~HpiArchive]" << std::endl;
+    }
     if (m_handle)
     {
         HPIClose(m_handle);
@@ -144,6 +160,11 @@ std::string HpiArchive::name() const
 
 void HpiArchive::directory(std::map<std::string, HpiEntry> &entries, const std::string &dirName, std::function<bool(const char*, bool)> match)
 {
+    if (VERBOSE)
+    {
+        std::cout << "[HpiArchive::directory] dirName=" << dirName << std::endl;
+    }
+
     char fileName[MAX_PATH];
     int fileType, size;
     std::function<LRESULT(int n)> next;
@@ -185,6 +206,11 @@ void HpiArchive::directory(std::map<std::string, HpiEntry> &entries, const std::
 
 std::string HpiArchive::load(const std::string &fileName, int offset, int byteCount)
 {
+    if (VERBOSE)
+    {
+        std::cout << "[HpiArchive::load] fileName=" << fileName << ", offset=" << offset << ", byteCount=" << byteCount << std::endl;
+    }
+
     std::string result;
     result.resize(byteCount);
 
@@ -212,6 +238,11 @@ void HpiArchive::directory(
     const std::string &gamePath, const std::string &hpiGlobSpec,
     const std::string &hpiSubDir, std::function<bool(const char*, bool)> match)
 {
+    if (VERBOSE)
+    {
+        std::cout << "[HpiArchive::directory] gamePath=" << gamePath << ", hpiGlobSpec=" << hpiGlobSpec << ", hpiSubDir=" << hpiSubDir << std::endl;
+    }
+
     // TA does this in alphabetical order
     std::set<std::string> hpiFiles;
     {
@@ -245,7 +276,25 @@ void HpiArchive::directory(
             }
         }
 
-        HpiArchive hpi(gamePath + "\\" + hpiFile);
-        hpi.directory(entries, hpiSubDir, match);
+        try
+        {
+            HpiArchive hpi(gamePath + "\\" + hpiFile);
+            hpi.directory(entries, hpiSubDir, match);
+        }
+        catch (const std::exception & e)
+        {
+            if (VERBOSE)
+            {
+                std::cout << e.what() << std::endl;
+            }
+        }
+        catch (...)
+        {
+            if (VERBOSE)
+            {
+                std::cout << "[HpiArchive::directory] general exception processing archive " << gamePath + "\\" + hpiFile << std::endl;
+            }
+        }
+
     }
 }
