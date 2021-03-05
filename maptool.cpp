@@ -562,13 +562,25 @@ std::vector<int> voronoiAccumulateFeatures(const std::vector<std::tuple<int, int
 {
     LOG_DEBUG("[voronoiAccumulateFeatures]");
     std::vector<int> areaValues(nodes.size(), 0);
+
+    for (const std::pair<int, int> &xyVal : nodes)
+    {
+        LOG_DEBUG("  node(x,y)=" << std::get<0>(xyVal) << ',' << std::get<1>(xyVal));
+    }
+
     for (const std::tuple<int,int,int> &xyVal: featuresXYValue)
     {
         int x = std::get<0>(xyVal);
         int y = std::get<1>(xyVal);
         int val = std::get<2>(xyVal);
         std::size_t closestNode = std::distance(nodes.begin(), findClosest(x, y, nodes.begin(), nodes.end()));
+        LOG_DEBUG("  node=" << closestNode << " x=" << x << " y=" << y << " val=" << val);
         areaValues[closestNode] += val;
+    }
+
+    for (int sum : areaValues)
+    {
+        LOG_DEBUG("  sum(node)=" << sum);
     }
     return areaValues;
 }
@@ -702,7 +714,7 @@ QString _engineeringNotation(double x, char k)
     }
     else if (x >= 10.0 && k == 0)
     {
-        return QString::number(int(x+0.5));
+        return QString::number(int(x));
     }
     else if (x >= 10.0)
     {
@@ -710,8 +722,8 @@ QString _engineeringNotation(double x, char k)
     }
     else if (x >= 1.0 && k == 0)
     {
-        QString s = QString("%1").arg(x+0.05).mid(0,3);
-        while (*s.rbegin() == '0' || *s.rbegin() == '.')
+        QString s = QString("%1").arg(x).mid(0,3);
+        while (s.contains('.') && (*s.rbegin() == '0' || *s.rbegin() == '.'))
         {
             s = s.mid(0, s.size() - 1);
         }
@@ -726,8 +738,8 @@ QString _engineeringNotation(double x, char k)
     }
     else if (x > 0.0)
     {
-        QString s = QString("%1").arg(x + 0.005).mid(1, 3);
-        while (*s.rbegin() == '0')
+        QString s = QString("%1").arg(x).mid(0, 4);
+        while (s.contains('.') && (*s.rbegin() == '0' || *s.rbegin() == '.'))
         {
             s = s.mid(0, s.size() - 1);
         }
@@ -743,9 +755,29 @@ QString _engineeringNotation(double x, char k)
     }
 }
 
+double twoOrThreSigFigs(double x)
+{
+    int order = std::floor(std::log(x) / std::log(10.0));
+    if (order % 3 == 2)
+    {
+        order -= 2;
+    }
+    else // including -ve
+    {
+        order -= 1;
+    }
+    x += std::pow(10.0, order) / 2.0;
+    return x;
+}
+
 QString engineeringNotation(double x)
 {
-    return _engineeringNotation(x, 0).replace('.', ',');
+    QString s = _engineeringNotation(twoOrThreSigFigs(x), 0).replace('.', ',');
+    while (s[0] == '0')
+    {
+        s = s.mid(1, s.length() - 1);
+    }
+    return s;
 }
 
 std::vector<std::tuple<int, int, int> > normaliseFeatures(const std::vector<std::tuple<int, int, int> >& features)
@@ -819,6 +851,7 @@ QImage createResourceMapImage(const rwe::TntArchive& tnt, const ta::TdfFile& ota
         int y = startPositions[n].second;
         double v = double(areaValues[n]) / double(resourceScaleFactor);
         QString value = engineeringNotation(v);
+        LOG_DEBUG("drawText pos:" << n << " x:" << x << " y:" << y << " v:" << v << " value:" << value);
         drawText(painter, scale * x, scale * y, 30, value, Qt::black, summaryColour);
     }
 
