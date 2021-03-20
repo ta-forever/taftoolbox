@@ -5,6 +5,13 @@
 
 using namespace ta;
 
+static std::string toLower(const std::string& s)
+{
+    std::string lower;
+    std::transform(s.begin(), s.end(), std::back_inserter(lower), ::tolower);
+    return lower;
+}
+
 static std::string stripComments(const std::string &text)
 {
     std::string result;
@@ -75,7 +82,7 @@ std::size_t TdfFile::tdfParse(const std::string &text, std::size_t pos, int maxD
             //std::cout << "<empty line>" << std::endl;
             continue;
         }
-        transform(line.begin(), line.end(), line.begin(), ::tolower);
+        //transform(line.begin(), line.end(), line.begin(), ::tolower);
         //std::cout << line << std::endl;
 
         std::size_t posEquals = line.find_first_of('=');
@@ -135,9 +142,23 @@ std::string TdfFile::getValue(const std::string& key, const std::string& default
     }
     else
     {
+        return toLower(it->second);
+    }
+}
+
+std::string TdfFile::getValueOriginalCase(const std::string& key, const std::string& default) const
+{
+    auto it = values.find(key);
+    if (it == values.end())
+    {
+        return default;
+    }
+    else
+    {
         return it->second;
     }
 }
+
 
 const TdfFile& TdfFile::getChild(const std::string& key) const
 {

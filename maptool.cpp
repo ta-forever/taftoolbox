@@ -12,12 +12,20 @@
 #include <QtGui/qpainter.h>
 #include "ta/hpi.h"
 #include "ta/tdf.h"
+#include "ta/palette.h"
 #include "nswf/nswfl_crc32.h"
 #include "rwe/tnt/TntArchive.h"
 #include "rwe/hpi/HpiArchive.h"
 
 static bool VERBOSE = false;
 #define LOG_DEBUG(x) if (VERBOSE) { std::cout << x << std::endl; }
+
+static std::string toLower(const std::string & s)
+{
+    std::string lower;
+    std::transform(s.begin(), s.end(), std::back_inserter(lower), ::tolower);
+    return lower;
+}
 
 std::string rweHpiLoad(const ta::HpiEntry &hpiEntry)
 {
@@ -251,7 +259,7 @@ bool isSkirmishMap(const ta::TdfFile& ota)
         {
             try
             {
-                if (childIt->first.substr(0, 6) == "schema" && childIt->second.values.at("type").substr(0, 7) == "network")
+                if (toLower(childIt->first.substr(0, 6)) == "schema" && childIt->second.getValue("type", "").substr(0, 7) == "network")
                 {
                     return true;
                 }
@@ -519,7 +527,7 @@ void appendTntFileFeatures(const rwe::TntArchive& tnt, std::vector< std::tuple<i
 
     std::vector<std::string> mapFeatures;
     tnt.readFeatures([&mapFeatures](const std::string& featureName) {
-        mapFeatures.push_back(QString(featureName.c_str()).toLower().toStdString());
+        mapFeatures.push_back(toLower(featureName));
     });
     //std::for_each(mapFeatures.begin(), mapFeatures.end(), [](std::string s) { std::cout << "mapfeature:" << s << std::endl; });
 
@@ -757,6 +765,11 @@ QString _engineeringNotation(double x, char k)
 
 double twoOrThreSigFigs(double x)
 {
+    if (x == 0.0)
+    {
+        return 0.0;
+    }
+
     int order = std::floor(std::log(x) / std::log(10.0));
     if (order % 3 == 2)
     {
@@ -773,7 +786,7 @@ double twoOrThreSigFigs(double x)
 QString engineeringNotation(double x)
 {
     QString s = _engineeringNotation(twoOrThreSigFigs(x), 0).replace('.', ',');
-    while (s[0] == '0')
+    while (s[0] == '0' && s.size()>1)
     {
         s = s.mid(1, s.length() - 1);
     }
@@ -1098,6 +1111,20 @@ int main(int argc, char *argv[])
         }
 
         QVector<QRgb> palette;
+        if (parser.isSet("thumb")) {
+            std::string paletteData((const char*)ta::PALETTE, sizeof(ta::PALETTE));
+            try
+            {
+                LOG_DEBUG("  loading palette");
+                paletteData = rweHpiLoad(paletteFiles.at("palettes\\PALETTE.PAL"));
+            }
+            catch (std::out_of_range&)
+            {
+                LOG_DEBUG("  out_of_range loading palette using hard coded palette");
+            }
+            palette = loadPalette(paletteData);
+        }
+
         for (const auto &p : mapFiles)
         {
             QFileInfo fileInfo(p.second.fileName.c_str());
@@ -1120,24 +1147,6 @@ int main(int argc, char *argv[])
                     }
                     if (parser.isSet("thumb"))
                     {
-                        if (palette.isEmpty())
-                        {
-                            try
-                            {
-                                LOG_DEBUG("  loading palette");
-                                palette = loadPalette(rweHpiLoad(paletteFiles.at("palettes\\PALETTE.PAL")));
-                            }
-                            catch (std::out_of_range&)
-                            {
-                                LOG_DEBUG("  out_of_range loading palette");
-                                palette.resize(256);
-                                for (std::uint32_t n = 0u; n < 256u; ++n)
-                                {
-                                    palette[n] = n | (n << 8) | (n << 16);
-                                }
-                            }
-                        }
-
                         LOG_DEBUG("  generating map images");
                         auto images = createMapImages(tntData, otaData, allFeatures, palette, parser.value("thumbtypes").split(','), parser.value("maxpositions").toInt(), parser.value("thumbsize").toInt());
                         LOG_DEBUG("  saving map images");

@@ -101,7 +101,7 @@ namespace NSWFL {
 			Note: For Example usage example, see FileCRC().
 		*/
 
-		void CRC32::PartialCRC(unsigned int *iCRC, const unsigned char *sData, size_t iDataLength)
+		void CRC32::PartialCRC(unsigned int *iCRC, const unsigned char *sData, size_t iDataLength) const
 		{
 			while (iDataLength--)
 			{
@@ -117,7 +117,7 @@ namespace NSWFL {
 			Returns the calculated CRC32 (through iOutCRC) for the given string.
 		*/
 
-		void CRC32::FullCRC(const unsigned char *sData, size_t iDataLength, unsigned int *iOutCRC)
+		void CRC32::FullCRC(const unsigned char *sData, size_t iDataLength, unsigned int *iOutCRC) const
 		{
 			((unsigned int)*iOutCRC) = 0xffffffff; //Initilaize the CRC.
 
