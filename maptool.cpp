@@ -10,12 +10,12 @@
 #include <QtCore/qelapsedtimer.h>
 #include <QtGui/qimage.h>
 #include <QtGui/qpainter.h>
-#include "ta/hpi.h"
 #include "ta/tdf.h"
 #include "ta/palette.h"
 #include "nswf/nswfl_crc32.h"
 #include "rwe/tnt/TntArchive.h"
 #include "rwe/hpi/HpiArchive.h"
+#include <set>
 
 static bool VERBOSE = false;
 #define LOG_DEBUG(x) if (VERBOSE) { std::cout << x << std::endl; }
@@ -27,31 +27,137 @@ static std::string toLower(const std::string & s)
     return lower;
 }
 
-std::string rweHpiLoad(const ta::HpiEntry &hpiEntry)
+struct HpiArchiveRepository
 {
-    LOG_DEBUG("[rweHpiLoad]" << hpiEntry.hpiArchive << ":" << hpiEntry.fileName);
-
-    // map packs packed with a buggy version of HPIZ can't be opened by JoeD's hpiutil.dll.
-    // so instead we're going to use (a slightly modified version of) RWE's HpiArchive to actually load files.
-    static std::shared_ptr<std::istream> fs;
-    static std::shared_ptr<rwe::HpiArchive> hpi;
-    static std::string hpiPath;
-
-    if (hpiPath != hpiEntry.hpiArchive)
+    struct Archive
     {
-        fs.reset(new std::ifstream(hpiEntry.hpiArchive, std::ios::binary));
-        hpi.reset(new rwe::HpiArchive(fs.get()));
-        hpiPath = hpiEntry.hpiArchive;
-    }
+        std::shared_ptr<std::istream> fs;
+        std::shared_ptr<rwe::HpiArchive> hpi;
+        std::string hpiPath;
+    };
 
-    std::string filename = hpiEntry.fileName;
-    std::replace(filename.begin(), filename.end(), '\\', '/');
-    const rwe::HpiArchive::File *file = hpi->findFile(filename);
+    static std::map<std::string, Archive> m_archives;
+
+public:
+    static rwe::HpiArchive& get(std::string path)
+    {
+        Archive& archive = m_archives[path];
+        if (!archive.hpi)
+        {
+            archive.fs.reset(new std::ifstream(path, std::ios::binary));
+            archive.hpi.reset(new rwe::HpiArchive(archive.fs.get()));
+            archive.hpiPath = path;
+        }
+        return *archive.hpi;
+    }
+};
+
+std::map<std::string, HpiArchiveRepository::Archive> HpiArchiveRepository::m_archives;
+
+struct HpiEntry
+{
+    std::string archivePath;
+    std::string filePath;   // original case
+    std::size_t fileSize;
+    std::shared_ptr<rwe::HpiArchive::File> file;
+};
+
+std::string hpiLoad(const HpiEntry &entry)
+{
+    LOG_DEBUG("[hpiLoad] " << entry.archivePath << ":" << entry.filePath);
 
     std::string data;
-    data.resize(hpiEntry.size);
-    hpi->extract(*file, const_cast<char*>(data.data()));
+    {
+        rwe::HpiArchive& hpi = HpiArchiveRepository::get(entry.archivePath);
+        LOG_DEBUG("[hpiLoad] " << entry.archivePath << ":" << entry.filePath << ", size=" << entry.file->size);
+        data.resize(entry.file->size);
+        hpi.extract(*entry.file, const_cast<char*>(data.data()));
+    }
     return data;
+}
+
+void HpiDirectory(
+    std::map<std::string /* lower case */, HpiEntry>& entries,
+    const rwe::HpiArchive::Directory& root,
+    const std::string& archivePath,
+    const std::string& filePathBase,
+    std::function<bool(const char* /* fileName */, bool /* isDirectory */)> match)
+{
+    for (const rwe::HpiArchive::DirectoryEntry &dirEntry : root.entries)
+    {
+        bool isDirectory = dirEntry.directory.get() != NULL;
+        std::string filePath = filePathBase + "/" + dirEntry.name;
+        if (match(dirEntry.name.c_str(), isDirectory))
+        {
+            LOG_DEBUG("[HpiDirectory] FILE MATCH " << archivePath << ':' << filePath << (isDirectory ? "[DIRECTORY]" : "[FILE]"));
+            HpiEntry& hpiEntry = entries[toLower(filePath)];
+            hpiEntry.archivePath = archivePath;
+            hpiEntry.filePath = filePath;
+            hpiEntry.fileSize = dirEntry.file->size;
+            hpiEntry.file = dirEntry.file;
+        }
+        else
+        {
+            LOG_DEBUG("[HpiDirectory] NO FILE MATCH " << archivePath << ':' << filePath << (isDirectory ? "[DIRECTORY]" : "[FILE]"));
+        }
+
+        if (isDirectory)
+        {
+            HpiDirectory(entries, *dirEntry.directory, archivePath, filePath, match);
+        }
+    }
+}
+
+void HpiDirectory(
+    std::map<std::string /* lower case */, HpiEntry>& entries,
+    const std::string& gamePath, const std::string& hpiGlobSpec, const std::string& hpiSubDir,
+    std::function<bool(const char* /* fileName */, bool /* isDirectory */)> match)
+{
+    LOG_DEBUG("[HpiDirectory] gamePath=" << gamePath << ", hpiGlobSpec=" << hpiGlobSpec << ", hpiSubDir=" << hpiSubDir);
+
+    // TA does this in alphabetical order
+    QStringList hpiFiles = QDir(QString::fromStdString(gamePath)).entryList({ QString::fromStdString(hpiGlobSpec) }, QDir::Files, QDir::Name);
+
+    int nrHpi = 0;
+    for (QString hpiFile : hpiFiles)
+    {
+        if (QFileInfo(hpiFile).completeSuffix().toLower() == "hpi")
+        {
+            ++nrHpi;
+            if (nrHpi > 8)
+            {
+                // TA only loads the first 8 HPIs! go figure ....
+                //continue;
+            }
+        }
+
+        try
+        {
+            std::string archivePath = gamePath + "/" + hpiFile.toStdString();
+            rwe::HpiArchive& hpi = HpiArchiveRepository::get(archivePath);
+            for (const rwe::HpiArchive::DirectoryEntry & hpiDirEntry: hpi.root().entries)
+            {
+                if (hpiDirEntry.directory && 0 == QString::fromStdString(hpiDirEntry.name).compare(QString::fromStdString(hpiSubDir), Qt::CaseInsensitive))
+                {
+                    LOG_DEBUG("[HpiDirectory] DIR MATCH " << hpiFile.toStdString() << ':' << hpiDirEntry.name << (hpiDirEntry.directory ? "[DIRECTORY]" : "[FILE]"));
+                    HpiDirectory(entries, *hpiDirEntry.directory, archivePath, hpiDirEntry.name, match);
+                }
+                else
+                {
+                    LOG_DEBUG("[HpiDirectory] NO DIR MATCH " << hpiFile.toStdString() << ':' << hpiDirEntry.name << (hpiDirEntry.directory ? "[DIRECTORY]" : "[FILE]"));
+                }
+            }
+        }
+        catch (const std::exception & e)
+        {
+            LOG_DEBUG("[HpiDirectory] " << e.what());
+        }
+        catch (...)
+        {
+            LOG_DEBUG("[HpiDirectory] general exception processing archive " << gamePath << "/" << hpiFile.toStdString());
+        }
+
+    }
 }
 
 QVector<QRgb> loadPalette(const std::string &paletteFile)
@@ -212,7 +318,7 @@ QImage createHeightMapImage(const rwe::TntArchive& tnt)
         {
             double z = (h - meanHeight) / stdevHeight;
             z = 128.0 + z * 128.0 / 3.0;
-            h = min(max(h, 0.0), 255.0);
+            h = std::min(std::max(z, 0.0), 255.0);
         }
         im.setPixel(x, y, qRgb(h, h, h));
     }
@@ -279,7 +385,7 @@ bool isSkirmishMap(const std::string& otaData)
     return QString(otaData.c_str()).contains("type=network", Qt::CaseInsensitive);
 }
 
-void lsMap(std::ostream &os, const std::string &context, const ta::HpiEntry &hpiEntry, const ta::TdfFile &ota, std::uint32_t crc)
+void lsMap(std::ostream& os, const std::string& context, const std::string &hpiArchive, const ta::TdfFile& ota, std::uint32_t crc)
 {
     const char UNIT_SEPARATOR = '\x1f';
     const char RECORD_SEPARATOR = '\n';// '\x1e';
@@ -288,7 +394,7 @@ void lsMap(std::ostream &os, const std::string &context, const ta::HpiEntry &hpi
         try
         {
             auto tdfRootValues = it->second.values;
-            QFileInfo hpiFileInfo(hpiEntry.hpiArchive.c_str());
+            QFileInfo hpiFileInfo(hpiArchive.c_str());
 
             std::ostringstream ss;
             ss << context
@@ -341,7 +447,7 @@ std::ostream& operator<<(std::ostream& os, const QString& s)
     return os;
 }
 
-void sqlMap(std::ostream& os, const std::string& context, const ta::HpiEntry & hpiEntry, const ta::TdfFile& ota, std::uint32_t crc)
+void sqlMap(std::ostream& os, const std::string& context, const std::string &hpiArchive, const ta::TdfFile& ota, std::uint32_t crc)
 {
     const int MAP_SIZE_SCALE_FACTOR = 1;
     try
@@ -349,7 +455,7 @@ void sqlMap(std::ostream& os, const std::string& context, const ta::HpiEntry & h
         std::ostringstream ss;
         for (auto it = ota.children.begin(); it != ota.children.end(); ++it)
         {
-            QFileInfo hpiFileInfo(hpiEntry.hpiArchive.c_str());
+            QFileInfo hpiFileInfo(hpiArchive.c_str());
             QStringList values;
             values.append(sqlQuote(QString(context.c_str())));
             values.append(sqlQuote(QString("FFA")));
@@ -362,7 +468,7 @@ void sqlMap(std::ostream& os, const std::string& context, const ta::HpiEntry & h
         for (auto it = ota.children.begin(); it != ota.children.end(); ++it)
         {
             auto tdfRootValues = it->second.values;
-            QFileInfo hpiFileInfo(hpiEntry.hpiArchive.c_str());
+            QFileInfo hpiFileInfo(hpiArchive.c_str());
             QStringList values;
             values.append(sqlQuote(QString::fromStdString(tdfRootValues["missiondescription"])));
             values.append(QString::number(defaultInt(QString(tdfRootValues["numplayers"].c_str()).split(",").back().trimmed(), 10)));
@@ -624,8 +730,8 @@ std::vector<double> weightedVoronoiAccumulateFeatures(const std::vector<std::tup
 
 void drawLabel(QPainter& painter, int x, int y, int size, QString text, Qt::GlobalColor back, Qt::GlobalColor fore)
 {
-    x = min(max(x, size), painter.device()->width()-size);
-    y = min(max(y, size), painter.device()->height()-size);
+    x = std::min(std::max(x, size), painter.device()->width()-size);
+    y = std::min(std::max(y, size), painter.device()->height()-size);
 
     int ellipseWidth = 8*size/10;
     int ellipseHeight = 8*size / 10;
@@ -647,8 +753,8 @@ void drawLabel(QPainter& painter, int x, int y, int size, QString text, Qt::Glob
 
 void drawText(QPainter& painter, int x, int y, int size, QString text, Qt::GlobalColor back, Qt::GlobalColor fore)
 {
-    x = min(max(x, size), painter.device()->width()-size);
-    y = min(max(y, size), painter.device()->height()-size);
+    x = std::min(std::max(x, size), painter.device()->width()-size);
+    y = std::min(std::max(y, size), painter.device()->height()-size);
 
     int textWidth = size * text.size()/2;
     int textHeight = size;
@@ -666,7 +772,7 @@ void drawText(QPainter& painter, int x, int y, int size, QString text, Qt::Globa
 double resize(QImage& im, int nominalSize)
 {
     LOG_DEBUG("[resize(QImage)]");
-    int currentSize = max(im.width(), im.height());
+    int currentSize = std::max(im.width(), im.height());
     double scale = double(nominalSize) / double(currentSize);
 
     im = im.scaled(int(scale * double(im.width()) + 0.5), int(scale * double(im.height()) + 0.5));
@@ -805,14 +911,14 @@ std::vector<std::tuple<int, int, int> > normaliseFeatures(const std::vector<std:
     {
         return std::get<2>(a) < std::get<2>(b);
     }));
-    minVal = max(minVal, 1);
+    minVal = std::max(minVal, 1);
 
     std::vector<std::tuple<int, int, int> > normalisedFeatures;
     std::transform(features.begin(), features.end(), std::back_inserter(normalisedFeatures), [minVal](const std::tuple<int, int, int>& f)
     {
         int x = std::get<0>(f);
         int y = std::get<1>(f);
-        int v = max(std::get<2>(f),1);
+        int v = std::max(std::get<2>(f),1);
         return std::tuple<int, int, int>(x, y, int(std::log(double(v) / double(minVal))));
     });
 
@@ -978,7 +1084,6 @@ int main(int argc, char *argv[])
         }
     }
     LOG_DEBUG("--- app start");
-    ta::init(VERBOSE);
 
     QApplication app(argc, argv);
     QApplication::setApplicationName("MapTool");
@@ -990,7 +1095,7 @@ int main(int argc, char *argv[])
     parser.addOption(QCommandLineOption("hpispecs", "Search specs for HPI files.", "hpispecs", "*.hpi;*.gpf;rev31.gp3;*.ccx;*.ufo"));
     parser.addOption(QCommandLineOption("mapname", "map names to match (starts with).", "mapname", ""));
     parser.addOption(QCommandLineOption("hash", "Calculate hash for the map(s)."));
-    parser.addOption(QCommandLineOption("thumb", "Create thumbnail image(s) for the map(s) in the given directory.", "thumb", ".\\"));
+    parser.addOption(QCommandLineOption("thumb", "Create thumbnail image(s) for the map(s) in the given directory.", "thumb", "./"));
     parser.addOption(QCommandLineOption("thumbtypes", "comma separated list of preview types.", "thumbtypes", "mini,positions,mexes,geos,rocks,trees"));
     parser.addOption(QCommandLineOption("maxpositions", "maximum number of player positions to analyse for.", "maxpositions", "10"));
     parser.addOption(QCommandLineOption("thumbsize", "nominal size of thumbnail image.", "thumbsize", "375"));
@@ -1002,9 +1107,10 @@ int main(int argc, char *argv[])
     NSWFL::Hashing::CRC32 crc32;
     crc32.Initialize();
 
-    std::map<std::string, ta::HpiEntry> mapFiles;
-    std::map<std::string, ta::HpiEntry> paletteFiles;
-    std::map<std::string, ta::HpiEntry> featureFiles;
+    // map from asset filename to archive filename
+    std::map<std::string, HpiEntry> mapFiles;
+    std::map<std::string, HpiEntry> paletteFiles;
+    std::map<std::string, HpiEntry> featureFiles;
     QString mapName = parser.value("mapname");
 
     const bool doHash = parser.isSet("hash") || parser.isSet("sql");
@@ -1019,7 +1125,7 @@ int main(int argc, char *argv[])
     LOG_DEBUG("--- inspecting hpi archives ...");
     for (QString hpiSpec : parser.value("hpispecs").split(';'))
     {
-        ta::HpiArchive::directory(mapFiles, parser.value("gamepath").toStdString(), hpiSpec.toStdString(), "maps",
+        HpiDirectory(mapFiles, parser.value("gamepath").toStdString(), hpiSpec.toStdString(), "maps",
             [&mapName](const char *fileName, bool isDirectory)
         {
             QFileInfo fileInfo(fileName);
@@ -1030,12 +1136,12 @@ int main(int argc, char *argv[])
             return ok;
         });
 
-        ta::HpiArchive::directory(paletteFiles, parser.value("gamepath").toStdString(), hpiSpec.toStdString(), "palettes",
+        HpiDirectory(paletteFiles, parser.value("gamepath").toStdString(), hpiSpec.toStdString(), "palettes",
             [](const char *fileName, bool isDirectory) { return !isDirectory; });
 
         if (doLoadFeatures)
         {
-            ta::HpiArchive::directory(featureFiles, parser.value("gamepath").toStdString(), hpiSpec.toStdString(), "features",
+            HpiDirectory(featureFiles, parser.value("gamepath").toStdString(), hpiSpec.toStdString(), "features",
                 [](const char* fileName, bool isDirectory) {
                 return !isDirectory;
             });
@@ -1049,8 +1155,9 @@ int main(int argc, char *argv[])
         std::uint32_t crcFeatureFiles(-1);
         for (const auto& p : featureFiles)
         {
-            crc32.PartialCRC(&crcFeatureFiles, (const unsigned char*)p.second.fileName.data(), p.second.fileName.size());
-            crc32.PartialCRC(&crcFeatureFiles, (const unsigned char*)&p.second.size, sizeof(p.second.size));
+            std::string filePath = p.second.filePath;
+            crc32.PartialCRC(&crcFeatureFiles, (const unsigned char*)filePath.data(), filePath.size());
+            crc32.PartialCRC(&crcFeatureFiles, (const unsigned char*)&p.second.fileSize, sizeof(p.second.fileSize));
         }
 
         QString allFeaturesCacheFile(parser.value("featurescachedir") + "/" + "tafeatures." + QString::number(crcFeatureFiles, 16));
@@ -1064,11 +1171,11 @@ int main(int argc, char *argv[])
             LOG_DEBUG("--- loading features from hpi archives ...");
             for (const auto& p : featureFiles)
             {
-                QFileInfo fileInfo(p.second.fileName.c_str());
+                QFileInfo fileInfo(p.second.filePath.c_str());
                 std::string tdfData;
                 try
                 {
-                    tdfData = rweHpiLoad(p.second);
+                    tdfData = hpiLoad(p.second);
 
                     LOG_DEBUG("  parsing features");
                     ta::TdfFile features(tdfData, 1);
@@ -1103,10 +1210,10 @@ int main(int argc, char *argv[])
         LOG_DEBUG("--- populating otaFileNameLookup");
         for (const auto& p : mapFiles)
         {
-            QFileInfo fileInfo(p.second.fileName.c_str());
+            QFileInfo fileInfo(p.second.filePath.c_str());
             if (fileInfo.suffix().toLower() == "ota")
             {
-                otaFileNameLookup[fileInfo.baseName()] = p.second.fileName;
+                otaFileNameLookup[fileInfo.baseName()] = p.first;
             }
         }
 
@@ -1116,7 +1223,8 @@ int main(int argc, char *argv[])
             try
             {
                 LOG_DEBUG("  loading palette");
-                paletteData = rweHpiLoad(paletteFiles.at("palettes\\PALETTE.PAL"));
+                const HpiEntry &hpiEntry = paletteFiles.at("palettes/PALETTE.PAL");
+                paletteData = hpiLoad(hpiEntry);
             }
             catch (std::out_of_range&)
             {
@@ -1127,16 +1235,17 @@ int main(int argc, char *argv[])
 
         for (const auto &p : mapFiles)
         {
-            QFileInfo fileInfo(p.second.fileName.c_str());
+            QFileInfo fileInfo(p.second.filePath.c_str());
             if (fileInfo.suffix().toLower() == "tnt")
             {
-                LOG_DEBUG("--- processing map file " << p.second.fileName);
+                LOG_DEBUG("--- processing map file " << p.second.filePath);
                 std::string otaFileName = otaFileNameLookup[fileInfo.baseName()];
                 std::string tntData, otaData;
                 try
-                {
-                    tntData = rweHpiLoad(p.second);
-                    otaData = rweHpiLoad(mapFiles.at(otaFileName));
+                {;
+                    const HpiEntry &mapFileHpiEntry = mapFiles.at(otaFileName);
+                    tntData = hpiLoad(p.second);
+                    otaData = hpiLoad(mapFileHpiEntry);
 
                     if (doHash)
                     {
@@ -1155,7 +1264,7 @@ int main(int argc, char *argv[])
                 }
                 catch (const std::exception & e)
                 {
-                    LOG_DEBUG("exception processing map file " << p.second.hpiArchive << '/' << p.second.fileName << ":" << e.what());
+                    LOG_DEBUG("exception processing map file " << p.second.archivePath << '/' << p.second.filePath << ":" << e.what());
                     continue;
                 }
             }
@@ -1164,10 +1273,10 @@ int main(int argc, char *argv[])
 
     for (const auto &p : mapFiles)
     {
-        QFileInfo fileInfo(p.second.fileName.c_str());
+        QFileInfo fileInfo(p.second.filePath.c_str());
         if (fileInfo.suffix().toLower() == "ota")
         {
-            std::string data = rweHpiLoad(p.second);
+            std::string data = hpiLoad(p.second);
             bool isSkirmish = isSkirmishMap(data);
             if (!isSkirmish)
             {
@@ -1188,12 +1297,12 @@ int main(int argc, char *argv[])
             if (parser.isSet("sql"))
             {
                 LOG_DEBUG("  listing file (sql)");
-                sqlMap(std::cout, fileInfo.baseName().toStdString(), p.second, tdf, crc);
+                sqlMap(std::cout, fileInfo.baseName().toStdString(), p.second.archivePath, tdf, crc);
             }
             else
             {
                 LOG_DEBUG("  listing file (delimited text)");
-                lsMap(std::cout, fileInfo.baseName().toStdString(), p.second, tdf, doHash ? crc : 0u);
+                lsMap(std::cout, fileInfo.baseName().toStdString(), p.second.archivePath, tdf, doHash ? crc : 0u);
             }
         }
     }

@@ -1,6 +1,4 @@
 add_library(ta
-    hpi.h
-    hpi.cpp
     tdf.h
     tdf.cpp
 	palette.h
