@@ -32,8 +32,8 @@ namespace ta
         std::map<std::string, std::string, ci_less> values;
         std::map<std::string, TdfFile, ci_less> children;
 
-        std::string getValue(const std::string& key, const std::string &default) const;
-        std::string getValueOriginalCase(const std::string& key, const std::string& default) const;
+        std::string getValue(const std::string& key, const std::string &def) const;
+        std::string getValueOriginalCase(const std::string& key, const std::string& def) const;
         const TdfFile& getChild(const std::string& key) const;
 
         void serialise(std::ostream& os) const;

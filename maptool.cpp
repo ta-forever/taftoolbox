@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <iomanip>
 #include <map>
@@ -434,11 +435,11 @@ T bracket(const T& s)
     return '(' + s + ')';
 }
 
-int defaultInt(QString s, int default)
+int defaultInt(QString s, int def)
 {
     bool ok;
     int result = s.toInt(&ok);
-    return ok ? result : default;
+    return ok ? result : def;
 }
 
 std::ostream& operator<<(std::ostream& os, const QString& s)
@@ -1051,10 +1052,7 @@ std::map<QString,QImage> createMapImages(const std::string& tntData, const std::
 void saveMapImages(QFileInfo mapFileInfo, QString directory, const std::map<QString, QImage>& images)
 {
     LOG_DEBUG("[saveMapImages] mapFileInfo=" << mapFileInfo.fileName().toStdString() << ", directory=" << directory.toStdString());
-    QString fileNameEncoded = mapFileInfo.baseName();
-    fileNameEncoded.replace(" ", "%20");
-    fileNameEncoded.replace("[", "%5b");
-    fileNameEncoded.replace("]", "%5d");
+    QString fileName = mapFileInfo.baseName();
 
     for (const auto& p : images)
     {
@@ -1067,7 +1065,7 @@ void saveMapImages(QFileInfo mapFileInfo, QString directory, const std::map<QStr
             dir.mkpath(".");
         }
 
-        QString pngFileName = directory + "/" + previewType + "/" + fileNameEncoded + ".png";
+        QString pngFileName = directory + "/" + previewType + "/" + fileName + ".png";
         LOG_DEBUG("[saveMapImages] pngFileName=" << pngFileName.toStdString());
         image.save(pngFileName);
     }
@@ -1164,7 +1162,8 @@ int main(int argc, char *argv[])
         if (QFile(allFeaturesCacheFile).exists())
         {
             LOG_DEBUG("--- loading cached features. filename=" << allFeaturesCacheFile.toStdString());
-            allFeatures.deserialise(std::ifstream(allFeaturesCacheFile.toStdString(), std::ios::binary));
+            std::ifstream ifs(allFeaturesCacheFile.toStdString(), std::ios::binary);
+            allFeatures.deserialise(ifs);
         }
         else
         {
@@ -1198,7 +1197,8 @@ int main(int argc, char *argv[])
             if (parser.isSet("featurescachedir"))
             {
                 LOG_DEBUG("--- saving features to cache. filename=" << allFeaturesCacheFile.toStdString() << ", values:" << allFeatures.values.size() << ", children:" << allFeatures.children.size());
-                allFeatures.serialise(std::ofstream(allFeaturesCacheFile.toStdString(), std::ios::binary));
+                std::ofstream ofs(allFeaturesCacheFile.toStdString(), std::ios::binary);
+		allFeatures.serialise(ofs);
             }
         }
     }

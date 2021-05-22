@@ -133,12 +133,12 @@ std::size_t TdfFile::tdfParse(const std::string &text, std::size_t pos, int maxD
     return pos;
 }
 
-std::string TdfFile::getValue(const std::string& key, const std::string& default) const
+std::string TdfFile::getValue(const std::string& key, const std::string& def) const
 {
     auto it = values.find(key);
     if (it == values.end())
     {
-        return default;
+        return def;
     }
     else
     {
@@ -146,12 +146,12 @@ std::string TdfFile::getValue(const std::string& key, const std::string& default
     }
 }
 
-std::string TdfFile::getValueOriginalCase(const std::string& key, const std::string& default) const
+std::string TdfFile::getValueOriginalCase(const std::string& key, const std::string& def) const
 {
     auto it = values.find(key);
     if (it == values.end())
     {
-        return default;
+        return def;
     }
     else
     {
