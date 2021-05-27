@@ -1,7 +1,6 @@
-
 find_package(ZLIB)
 
-add_library(rwe
+add_library(rwe STATIC
     io_utils.h
     io_utils.cpp
     rwe_string.h
