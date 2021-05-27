@@ -11,6 +11,7 @@
 #include <QtCore/qelapsedtimer.h>
 #include <QtGui/qimage.h>
 #include <QtGui/qpainter.h>
+#include <QtGui/qpainterpath.h>
 #include "ta/tdf.h"
 #include "ta/palette.h"
 #include "nswf/nswfl_crc32.h"
