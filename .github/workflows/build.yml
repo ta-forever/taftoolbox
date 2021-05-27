@@ -25,7 +25,7 @@ jobs:
       run: |
           mkdir -p build-${{env.BUILD_TAG}} && cd build-${{env.BUILD_TAG}}
           ../build-i686-w64-mingw32.sh
-          zip taftoolbox-${{env.BUILD_TAG}}.zip bin/*
+          zip -r taftoolbox-${{env.BUILD_TAG}}.zip bin/*
       env:
         BUILD_TAG: win-x86
 
