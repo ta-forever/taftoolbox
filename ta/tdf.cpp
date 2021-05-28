@@ -39,7 +39,7 @@ static std::string stripComments(const std::string &text)
 }
 
 static std::string trim(const std::string &s) {
-    std::regex e("^\\s+|\\s+$");   // remove leading and trailing spaces
+    static std::regex e("^\\s+|\\s+$");   // remove leading and trailing spaces. NB regex compilation very slow on mingw, so keep it static!
     return std::regex_replace(s, e, "");
 }
 
