@@ -1171,11 +1171,10 @@ int main(int argc, char *argv[])
             LOG_DEBUG("--- loading features from hpi archives ...");
             for (const auto& p : featureFiles)
             {
-                QFileInfo fileInfo(p.second.filePath.c_str());
-                std::string tdfData;
                 try
                 {
-                    tdfData = hpiLoad(p.second);
+                    QFileInfo fileInfo(p.second.filePath.c_str());
+                    std::string tdfData = hpiLoad(p.second);
 
                     LOG_DEBUG("  parsing features");
                     ta::TdfFile features(tdfData, 1);
@@ -1194,12 +1193,17 @@ int main(int argc, char *argv[])
                     LOG_DEBUG("  exception loading/parsing file:" << e.what());
                     continue;
                 }
+                catch (...)
+                {
+                    LOG_DEBUG("  exception loading/parsing file");
+                    continue;
+                }
             }
             if (parser.isSet("featurescachedir"))
             {
                 LOG_DEBUG("--- saving features to cache. filename=" << allFeaturesCacheFile.toStdString() << ", values:" << allFeatures.values.size() << ", children:" << allFeatures.children.size());
                 std::ofstream ofs(allFeaturesCacheFile.toStdString(), std::ios::binary);
-		allFeatures.serialise(ofs);
+                allFeatures.serialise(ofs);
             }
         }
     }
@@ -1229,21 +1233,26 @@ int main(int argc, char *argv[])
             }
             catch (std::out_of_range&)
             {
-                LOG_DEBUG("  out_of_range loading palette using hard coded palette");
+                LOG_DEBUG("  out_of_range loading palette. using hard coded palette");
+            }
+            catch (...)
+            {
+                LOG_DEBUG("  unknown exception loading palette. using hard coded palette");
             }
             palette = loadPalette(paletteData);
         }
 
         for (const auto &p : mapFiles)
         {
-            QFileInfo fileInfo(p.second.filePath.c_str());
-            if (fileInfo.suffix().toLower() == "tnt")
+            try
             {
-                LOG_DEBUG("--- processing map file " << p.second.filePath);
-                std::string otaFileName = otaFileNameLookup[fileInfo.baseName()];
-                std::string tntData, otaData;
-                try
-                {;
+                QFileInfo fileInfo(p.second.filePath.c_str());
+                if (fileInfo.suffix().toLower() == "tnt")
+                {
+                    LOG_DEBUG("--- processing map file " << p.second.filePath);
+                    std::string otaFileName = otaFileNameLookup[fileInfo.baseName()];
+                    std::string tntData, otaData;
+
                     const HpiEntry &mapFileHpiEntry = mapFiles.at(otaFileName);
                     tntData = hpiLoad(p.second);
                     otaData = hpiLoad(mapFileHpiEntry);
@@ -1263,48 +1272,67 @@ int main(int argc, char *argv[])
                         saveMapImages(fileInfo, parser.value("thumb"), images);
                     }
                 }
-                catch (const std::exception & e)
-                {
-                    LOG_DEBUG("exception processing map file " << p.second.archivePath << '/' << p.second.filePath << ":" << e.what());
-                    continue;
-                }
+            }
+            catch (const std::exception & e)
+            {
+                LOG_DEBUG("  exception processing map file " << p.second.archivePath << '/' << p.second.filePath << ":" << e.what());
+                continue;
+            }
+            catch (...)
+            {
+                LOG_DEBUG("  unknown exception processing map file " << p.second.archivePath << '/' << p.second.filePath);
+                continue;
             }
         }
     }
 
     for (const auto &p : mapFiles)
     {
-        QFileInfo fileInfo(p.second.filePath.c_str());
-        if (fileInfo.suffix().toLower() == "ota")
+        try
         {
-            std::string data = hpiLoad(p.second);
-            bool isSkirmish = isSkirmishMap(data);
-            if (!isSkirmish)
+            QFileInfo fileInfo(p.second.filePath.c_str());
+            if (fileInfo.suffix().toLower() == "ota")
             {
-                LOG_DEBUG("  not a skirmish map. ignoring");
-                continue;
-            }
 
-            std::uint32_t &crc = crcByMap[fileInfo.baseName().toStdString()];
-            if (doHash)
-            {
-                LOG_DEBUG("  calculating .ota part of CRC");
-                crc32.PartialCRC(&crc, (const std::uint8_t*)data.data(), data.size());
-                crc ^= -1;
-            }
+                std::string data = hpiLoad(p.second);
+                bool isSkirmish = isSkirmishMap(data);
+                if (!isSkirmish)
+                {
+                    LOG_DEBUG("  not a skirmish map. ignoring");
+                    continue;
+                }
 
-            LOG_DEBUG("  parsing .ota file");
-            ta::TdfFile tdf(data, 1);
-            if (parser.isSet("sql"))
-            {
-                LOG_DEBUG("  listing file (sql)");
-                sqlMap(std::cout, fileInfo.baseName().toStdString(), p.second.archivePath, tdf, crc);
+                std::uint32_t& crc = crcByMap[fileInfo.baseName().toStdString()];
+                if (doHash)
+                {
+                    LOG_DEBUG("  calculating .ota part of CRC");
+                    crc32.PartialCRC(&crc, (const std::uint8_t*)data.data(), data.size());
+                    crc ^= -1;
+                }
+
+                LOG_DEBUG("  parsing .ota file");
+                ta::TdfFile tdf(data, 1);
+                if (parser.isSet("sql"))
+                {
+                    LOG_DEBUG("  listing file (sql)");
+                    sqlMap(std::cout, fileInfo.baseName().toStdString(), p.second.archivePath, tdf, crc);
+                }
+                else
+                {
+                    LOG_DEBUG("  listing file (delimited text)");
+                    lsMap(std::cout, fileInfo.baseName().toStdString(), p.second.archivePath, tdf, doHash ? crc : 0u);
+                }
             }
-            else
-            {
-                LOG_DEBUG("  listing file (delimited text)");
-                lsMap(std::cout, fileInfo.baseName().toStdString(), p.second.archivePath, tdf, doHash ? crc : 0u);
-            }
+        }
+        catch (const std::exception & e)
+        {
+            LOG_DEBUG("  exception generating hash for map file " << p.second.archivePath << '/' << p.second.filePath << ":" << e.what());
+            continue;
+        }
+        catch (...)
+        {
+            LOG_DEBUG("  unknown exception generating hash for map file " << p.second.archivePath << '/' << p.second.filePath);
+            continue;
         }
     }
 }
