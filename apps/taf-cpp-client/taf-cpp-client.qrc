@@ -1,0 +1,10 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource>
+    <file>MainWindow.css</file>
+    <file>LoginDialog.css</file>
+    <file>res/images/client/</file>
+    <file>res/games/</file>
+    <file>res/games/formatters/</file>
+    <file>res/client/</file>
+</qresource>
+</RCC>

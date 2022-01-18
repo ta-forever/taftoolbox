@@ -1,0 +1,861 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>817</width>
+    <height>764</height>
+   </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>600</width>
+    <height>400</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>FA Forever</string>
+  </property>
+  <property name="statusTip">
+   <string/>
+  </property>
+  <property name="autoFillBackground">
+   <bool>false</bool>
+  </property>
+  <property name="styleSheet">
+   <string notr="true"/>
+  </property>
+  <property name="toolButtonStyle">
+   <enum>Qt::ToolButtonIconOnly</enum>
+  </property>
+  <property name="dockOptions">
+   <set>QMainWindow::AllowTabbedDocks|QMainWindow::AnimatedDocks</set>
+  </property>
+  <property name="unifiedTitleAndToolBarOnMac">
+   <bool>false</bool>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <property name="baseSize">
+    <size>
+     <width>100</width>
+     <height>400</height>
+    </size>
+   </property>
+   <layout class="QGridLayout" name="mainGridLayout">
+    <property name="leftMargin">
+     <number>9</number>
+    </property>
+    <property name="topMargin">
+     <number>9</number>
+    </property>
+    <property name="rightMargin">
+     <number>9</number>
+    </property>
+    <property name="bottomMargin">
+     <number>9</number>
+    </property>
+    <property name="spacing">
+     <number>0</number>
+    </property>
+    <item row="2" column="0">
+     <widget class="QLabel" name="labelAutomatchInfo">
+      <property name="minimumSize">
+       <size>
+        <width>0</width>
+        <height>0</height>
+       </size>
+      </property>
+      <property name="font">
+       <font>
+        <weight>75</weight>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+     </widget>
+    </item>
+    <item row="0" column="0">
+     <layout class="QHBoxLayout" name="topLayout">
+      <property name="spacing">
+       <number>0</number>
+      </property>
+     </layout>
+    </item>
+    <item row="1" column="0">
+     <widget class="QTabWidget" name="mainTabs">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+        <horstretch>4</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="focusPolicy">
+       <enum>Qt::NoFocus</enum>
+      </property>
+      <property name="styleSheet">
+       <string notr="true"/>
+      </property>
+      <property name="tabPosition">
+       <enum>QTabWidget::South</enum>
+      </property>
+      <property name="tabShape">
+       <enum>QTabWidget::Rounded</enum>
+      </property>
+      <property name="currentIndex">
+       <number>1</number>
+      </property>
+      <property name="iconSize">
+       <size>
+        <width>30</width>
+        <height>30</height>
+       </size>
+      </property>
+      <property name="documentMode">
+       <bool>false</bool>
+      </property>
+      <property name="movable">
+       <bool>false</bool>
+      </property>
+      <widget class="QWidget" name="whatNewTab">
+       <attribute name="title">
+        <string>What's new ?</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="verticalLayout">
+        <property name="spacing">
+         <number>0</number>
+        </property>
+        <property name="leftMargin">
+         <number>0</number>
+        </property>
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <property name="rightMargin">
+         <number>0</number>
+        </property>
+        <property name="bottomMargin">
+         <number>0</number>
+        </property>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="gamesTab">
+       <attribute name="title">
+        <string>Play</string>
+       </attribute>
+       <layout class="QGridLayout" name="gridLayout_7">
+        <property name="leftMargin">
+         <number>6</number>
+        </property>
+        <property name="topMargin">
+         <number>6</number>
+        </property>
+        <property name="rightMargin">
+         <number>6</number>
+        </property>
+        <property name="bottomMargin">
+         <number>6</number>
+        </property>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="mapsTab">
+       <attribute name="title">
+        <string>Maps</string>
+       </attribute>
+       <layout class="QGridLayout" name="gridLayout">
+        <property name="leftMargin">
+         <number>6</number>
+        </property>
+        <property name="topMargin">
+         <number>6</number>
+        </property>
+        <property name="rightMargin">
+         <number>6</number>
+        </property>
+        <property name="bottomMargin">
+         <number>6</number>
+        </property>
+        <property name="horizontalSpacing">
+         <number>6</number>
+        </property>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="ladderTab">
+       <attribute name="title">
+        <string>Leaderboards</string>
+       </attribute>
+       <layout class="QGridLayout" name="gridLayout_4">
+        <property name="leftMargin">
+         <number>6</number>
+        </property>
+        <property name="topMargin">
+         <number>6</number>
+        </property>
+        <property name="rightMargin">
+         <number>6</number>
+        </property>
+        <property name="bottomMargin">
+         <number>6</number>
+        </property>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="replaysTab">
+       <attribute name="title">
+        <string>Replays</string>
+       </attribute>
+       <layout class="QGridLayout" name="gridLayout_2">
+        <property name="leftMargin">
+         <number>6</number>
+        </property>
+        <property name="topMargin">
+         <number>6</number>
+        </property>
+        <property name="rightMargin">
+         <number>6</number>
+        </property>
+        <property name="bottomMargin">
+         <number>6</number>
+        </property>
+       </layout>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>817</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuOptions">
+    <property name="title">
+     <string>Optio&amp;ns</string>
+    </property>
+    <widget class="QMenu" name="menuSettings">
+     <property name="title">
+      <string>&amp;Settings...</string>
+     </property>
+     <addaction name="actionSetAutoLogin"/>
+     <addaction name="actionSetAutoDownloadMods"/>
+     <addaction name="actionSetAutoDownloadMaps"/>
+     <addaction name="actionSetAutoGenerateMaps"/>
+     <addaction name="separator"/>
+     <addaction name="actionLink_account_to_Steam"/>
+     <addaction name="separator"/>
+     <addaction name="actionSetGamePath"/>
+     <addaction name="actionSaveGamelogs"/>
+     <addaction name="separator"/>
+     <addaction name="actionVaultFallback"/>
+    </widget>
+    <widget class="QMenu" name="menuTheme">
+     <property name="tearOffEnabled">
+      <bool>false</bool>
+     </property>
+     <property name="title">
+      <string>&amp;Theme...</string>
+     </property>
+    </widget>
+    <widget class="QMenu" name="menuClear">
+     <property name="title">
+      <string>C&amp;lear Data...</string>
+     </property>
+     <addaction name="actionClearCache"/>
+     <addaction name="actionClearSettings"/>
+     <addaction name="separator"/>
+     <addaction name="actionClearGameFiles"/>
+     <addaction name="actionClearMapGenerators"/>
+    </widget>
+    <widget class="QMenu" name="menuChat">
+     <property name="title">
+      <string>&amp;Chat...</string>
+     </property>
+     <widget class="QMenu" name="menuHide_chatter">
+      <property name="title">
+       <string>&amp;Hide chatter...</string>
+      </property>
+      <addaction name="actionHideChatterRank"/>
+      <addaction name="actionHideChatterAvatar"/>
+      <addaction name="actionHideChatterCountry"/>
+      <addaction name="actionHideChatterNick"/>
+      <addaction name="actionHideChatterStatus"/>
+      <addaction name="actionHideChatterMap"/>
+     </widget>
+     <addaction name="actionColoredNicknames"/>
+     <addaction name="actionFriendsOnTop"/>
+     <addaction name="actionSetNewbiesChannel"/>
+     <addaction name="actionSetAutoJoinChannels"/>
+     <addaction name="actionSetJoinsParts"/>
+     <addaction name="actionSetOpenGames"/>
+     <addaction name="actionSetLiveReplays"/>
+     <addaction name="actionSetSoundEffects"/>
+     <addaction name="actionIgnoreFoes"/>
+     <addaction name="actionLanguageChannels"/>
+     <addaction name="menuHide_chatter"/>
+    </widget>
+    <widget class="QMenu" name="menuNotifications">
+     <property name="title">
+      <string>&amp;Notifications...</string>
+     </property>
+     <addaction name="actionNsEnabled"/>
+     <addaction name="actionNsSettings"/>
+    </widget>
+    <widget class="QMenu" name="menuLocalPath">
+     <property name="title">
+      <string>Show &amp;Paths...</string>
+     </property>
+     <addaction name="actionShowMapsDir"/>
+     <addaction name="actionShowModsDir"/>
+     <addaction name="actionShowReplaysDir"/>
+     <addaction name="actionShowThemesDir"/>
+     <addaction name="actionShowGamePrefs"/>
+     <addaction name="actionShowClientConfigFile"/>
+    </widget>
+    <widget class="QMenu" name="menuUpdates">
+     <property name="title">
+      <string>&amp;Updates...</string>
+     </property>
+     <addaction name="actionCheck_for_Updates"/>
+     <addaction name="actionUpdate_Settings"/>
+    </widget>
+    <widget class="QMenu" name="menuKeep_game_files_in_cache">
+     <property name="title">
+      <string>Keep game files in cache...</string>
+     </property>
+     <addaction name="actionDoNotKeep"/>
+     <addaction name="actionForever"/>
+     <addaction name="separator"/>
+     <addaction name="actionSetYourOwnTimeInterval"/>
+     <addaction name="separator"/>
+     <addaction name="actionKeepCacheWhileInSession"/>
+    </widget>
+    <widget class="QMenu" name="menuICE_Adapter">
+     <property name="title">
+      <string>ICE Adapter...</string>
+     </property>
+     <addaction name="actionEnableIceAdapterInfoWindow"/>
+     <addaction name="actionSetIceAdapterWindowLaunchDelay"/>
+    </widget>
+    <addaction name="menuSettings"/>
+    <addaction name="menuChat"/>
+    <addaction name="menuTheme"/>
+    <addaction name="menuNotifications"/>
+    <addaction name="menuUpdates"/>
+    <addaction name="menuICE_Adapter"/>
+    <addaction name="separator"/>
+    <addaction name="menuKeep_game_files_in_cache"/>
+    <addaction name="separator"/>
+    <addaction name="menuLocalPath"/>
+    <addaction name="menuClear"/>
+   </widget>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>HELP</string>
+    </property>
+    <addaction name="actionWiki"/>
+    <addaction name="separator"/>
+    <addaction name="actionTechSupport"/>
+    <addaction name="actionShowLogs"/>
+    <addaction name="separator"/>
+    <addaction name="actionAbout"/>
+   </widget>
+   <widget class="QMenu" name="menuLinks">
+    <property name="title">
+     <string>&amp;Links</string>
+    </property>
+    <addaction name="actionLinkUnitDB"/>
+    <addaction name="actionLinkMapPool"/>
+    <addaction name="separator"/>
+    <addaction name="actionLinkWebsite"/>
+    <addaction name="actionLinkForums"/>
+    <addaction name="actionLinkWiki"/>
+    <addaction name="actionLinkGitHub"/>
+   </widget>
+   <widget class="QMenu" name="menuTools">
+    <property name="title">
+     <string>&amp;Tools</string>
+    </property>
+    <addaction name="actionCheckPlayerAliases"/>
+   </widget>
+   <addaction name="menuLinks"/>
+   <addaction name="menuOptions"/>
+   <addaction name="menuTools"/>
+   <addaction name="menuHelp"/>
+  </widget>
+  <action name="actionAbout">
+   <property name="text">
+    <string>&amp;About FAF</string>
+   </property>
+  </action>
+  <action name="actionLinkWebsite">
+   <property name="text">
+    <string>&amp;Website</string>
+   </property>
+  </action>
+  <action name="actionLinkWiki">
+   <property name="text">
+    <string>W&amp;iki</string>
+   </property>
+  </action>
+  <action name="actionLinkGitHub">
+   <property name="text">
+    <string>&amp;GitHub</string>
+   </property>
+  </action>
+  <action name="actionShowLogs">
+   <property name="text">
+    <string>&amp;Show Logs</string>
+   </property>
+  </action>
+  <action name="actionReportBug">
+   <property name="text">
+    <string>Report a Bug</string>
+   </property>
+  </action>
+  <action name="actionLinkForums">
+   <property name="text">
+    <string>&amp;Forums</string>
+   </property>
+  </action>
+  <action name="actionLinkUnitDB">
+   <property name="text">
+    <string>&amp;Unit List</string>
+   </property>
+  </action>
+  <action name="actionTechSupport">
+   <property name="text">
+    <string>&amp;Tech Support</string>
+   </property>
+  </action>
+  <action name="actionSetAutoLogin">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Automatic Login</string>
+   </property>
+  </action>
+  <action name="actionSetNewbiesChannel">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Use Newbies Channel</string>
+   </property>
+  </action>
+  <action name="actionSetAutoJoinChannels">
+   <property name="text">
+    <string>Set &amp;autojoin channels</string>
+   </property>
+  </action>
+  <action name="actionSetAutoDownloadMods">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Automatic &amp;Downloading of Mods</string>
+   </property>
+  </action>
+  <action name="actionSetAutoDownloadMaps">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Automatic Downloading &amp;of Maps</string>
+   </property>
+  </action>
+  <action name="actionClearCache">
+   <property name="text">
+    <string>&amp;Cache</string>
+   </property>
+  </action>
+  <action name="actionClearLogs">
+   <property name="text">
+    <string>Logs</string>
+   </property>
+  </action>
+  <action name="actionClearSettings">
+   <property name="text">
+    <string>&amp;Settings</string>
+   </property>
+  </action>
+  <action name="actionClearGameFiles">
+   <property name="text">
+    <string>&amp;Game Files</string>
+   </property>
+  </action>
+  <action name="actionSetGamePath">
+   <property name="text">
+    <string>&amp;Game Path...</string>
+   </property>
+  </action>
+  <action name="actionSetSoundEffects">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Sound Effects</string>
+   </property>
+  </action>
+  <action name="actionMessages">
+   <property name="text">
+    <string>Messages</string>
+   </property>
+  </action>
+  <action name="actionJoin_Part_Messages">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Joins / Parts</string>
+   </property>
+  </action>
+  <action name="actionAnnounce_Games">
+   <property name="text">
+    <string>Open Games</string>
+   </property>
+  </action>
+  <action name="actionLive_Replays">
+   <property name="text">
+    <string>Live Replays</string>
+   </property>
+  </action>
+  <action name="actionSetJoinsParts">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Joins / Parts</string>
+   </property>
+  </action>
+  <action name="actionSetOpenGames">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Friend &amp;Games</string>
+   </property>
+  </action>
+  <action name="actionSetLiveReplays">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Friend &amp;Replays</string>
+   </property>
+  </action>
+  <action name="actionSaveGamelogs">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Save game logs</string>
+   </property>
+  </action>
+  <action name="actionColoredNicknames">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Colored nicknames</string>
+   </property>
+  </action>
+  <action name="actionFriendsOnTop">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Friends on top</string>
+   </property>
+  </action>
+  <action name="actionWiki">
+   <property name="text">
+    <string>&amp;Wiki</string>
+   </property>
+  </action>
+  <action name="actionLink_account_to_Steam">
+   <property name="text">
+    <string>&amp;Link account to Steam</string>
+   </property>
+  </action>
+  <action name="actionTestingConnections">
+   <property name="text">
+    <string>Test Proxy Server</string>
+   </property>
+  </action>
+  <action name="actionNotifications">
+   <property name="text">
+    <string>Notifications...</string>
+   </property>
+  </action>
+  <action name="actionEnabled">
+   <property name="text">
+    <string>Enabled</string>
+   </property>
+  </action>
+  <action name="actionNsEnabled">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Enabled</string>
+   </property>
+  </action>
+  <action name="actionNsSettings">
+   <property name="text">
+    <string>&amp;Settings</string>
+   </property>
+  </action>
+  <action name="actionShowModsDir">
+   <property name="text">
+    <string>Show &amp;mods folder</string>
+   </property>
+  </action>
+  <action name="actionShowReplaysDir">
+   <property name="text">
+    <string>Show &amp;replays folder</string>
+   </property>
+  </action>
+  <action name="actionShowMapsDir">
+   <property name="text">
+    <string>&amp;Show maps folder</string>
+   </property>
+  </action>
+  <action name="actionPath">
+   <property name="text">
+    <string>&amp;Path...</string>
+   </property>
+  </action>
+  <action name="actionShowGamePrefs">
+   <property name="text">
+    <string>Show &amp;game.prefs</string>
+   </property>
+  </action>
+  <action name="actionCheck_for_Updates">
+   <property name="text">
+    <string>&amp;Check for Updates</string>
+   </property>
+  </action>
+  <action name="actionUpdate_Settings">
+   <property name="text">
+    <string>&amp;Update Settings...</string>
+   </property>
+  </action>
+  <action name="actionShowThemesDir">
+   <property name="text">
+    <string>Show &amp;themes folder</string>
+   </property>
+  </action>
+  <action name="actionLinkMapPool">
+   <property name="text">
+    <string>&amp;Ladder Map Pool</string>
+   </property>
+  </action>
+  <action name="actionCheckPlayerAliases">
+   <property name="text">
+    <string>&amp;Check player aliases</string>
+   </property>
+  </action>
+  <action name="actionIgnoreFoes">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Ignore foes</string>
+   </property>
+  </action>
+  <action name="actionShowClientConfigFile">
+   <property name="text">
+    <string>Show &amp;client config file</string>
+   </property>
+  </action>
+  <action name="actionHideChatterNick">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Nick</string>
+   </property>
+  </action>
+  <action name="actionHideChatterMap">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Map</string>
+   </property>
+  </action>
+  <action name="actionHideChatterRank">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Rank</string>
+   </property>
+  </action>
+  <action name="actionHideChatterAvatar">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Avatar</string>
+   </property>
+  </action>
+  <action name="actionHideChatterCountry">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Country</string>
+   </property>
+  </action>
+  <action name="actionHideChatterStatus">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Status</string>
+   </property>
+  </action>
+  <action name="actionLanguageChannels">
+   <property name="text">
+    <string>Language channels</string>
+   </property>
+  </action>
+  <action name="actionDoNotKeep">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Do not keep</string>
+   </property>
+  </action>
+  <action name="action15Days">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>15 days</string>
+   </property>
+  </action>
+  <action name="action30Days">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>30 days</string>
+   </property>
+  </action>
+  <action name="action60Days">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>60 days</string>
+   </property>
+  </action>
+  <action name="actionForever">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Forever</string>
+   </property>
+  </action>
+  <action name="actionSetYourOwnTimeInterval">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Set your own time interval</string>
+   </property>
+  </action>
+  <action name="actionKeepCacheWhileInSession">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Keep cache while in session</string>
+   </property>
+  </action>
+  <action name="actionSetAutoGenerateMaps">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Automatic Generating of Maps</string>
+   </property>
+  </action>
+  <action name="actionClearMapGenerators">
+   <property name="text">
+    <string>Map Generators</string>
+   </property>
+  </action>
+  <action name="actionVaultFallback">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Vault fallback location</string>
+   </property>
+   <property name="toolTip">
+    <string>Sets &quot;ProgramData/FAForever/user&quot; instead of &quot;User/Documents&quot; folder as personal directory</string>
+   </property>
+  </action>
+  <action name="actionEnableIceAdapterInfoWindow">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Enable info window</string>
+   </property>
+  </action>
+  <action name="actionSetIceAdapterWindowLaunchDelay">
+   <property name="checkable">
+    <bool>false</bool>
+   </property>
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Set window launch delay...</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

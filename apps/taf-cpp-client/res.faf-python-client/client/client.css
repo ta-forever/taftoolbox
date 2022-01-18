@@ -1,0 +1,874 @@
+
+ *[warning="true"]
+{
+    color:lightgrey;
+    font-size:8pt;
+}
+
+
+*[titleLabel="true"]
+{
+    color:lightgrey;
+    font-size:12pt;
+    font-family: Verdana;
+}
+
+*[windowControlBtn="true"]
+{
+    background-color: rgba(0,0,0,0);
+    width: 18px;
+    height: 18px;
+
+}
+
+QMenuBar
+{
+    background-color: rgba(0,0,0,0);
+}
+
+QMenuBar::item
+{
+    background-color: rgba(0,0,0,0);
+    color: white;
+}
+
+ QMenuBar::item:selected { /* when selected using mouse or keyboard */
+     background: #a8a8a8;
+ }
+
+ QMenuBar::item:pressed {
+     background: #888888;
+ }
+
+
+ QMenu {
+     background-color: rgb(50,50,50);
+     color: lightgrey;
+     margin: 2px; /* some spacing around the menu */
+ }
+
+ QMenu::item {
+     padding: 2px 25px 2px 20px;
+     border: 1px solid transparent; /* reserve space for selection border */
+ }
+
+ QMenu::item:selected {
+     background: rgba(150, 150, 150, 150);
+     border-radius: 2px;
+ }
+
+ QMenu::icon:checked { /* appearance of a 'checked' icon */
+     background: gray;
+     border: 1px inset gray;
+     position: absolute;
+     top: 1px;
+     right: 1px;
+     bottom: 1px;
+     left: 1px;
+ }
+
+ QMenu::separator {
+     height: 1px;
+     background: lightgray;
+     margin-top: 5px;
+     margin-bottom: 5px;
+ }
+
+ QMenu::indicator {
+     width: 13px;
+     height: 13px;
+ }
+
+QTabWidget#matchmakerQueues::pane
+{
+    background-color: none;
+    border: none;
+}
+
+QTabWidget#matchmakerQueues::tab-bar
+{
+    min-width: 10000000;
+    alignment: center;
+}
+
+QTabWidget#matchmakerQueues > QTabBar::tab
+{
+    min-width: 60px;
+    min-height: 25px;
+    background-color:#383838;
+    /* color: silver; */
+    border-bottom-left-radius: 2px;
+    border-bottom-right-radius: 2px;
+}
+
+QTabWidget#matchmakerQueues > QTabBar::tab::hover
+{
+    color: silver;
+    background-color: #808080;
+}
+
+QTabWidget#matchmakerQueues > QTabBar::tab::selected
+{
+    color: white;
+    background-color: #758fa0;
+}
+
+
+QTabWidget #lobbyTab,#gamesTab,#ladderTab,#tournamentTab,#coopTab,#replaysTab,#vaultsTab,#mapsTab,#modsTab
+{ /* sets background color for every widget under a tab */
+        background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 rgba(15, 15, 15, 200), stop:1 #2f2f2f);
+        border-radius: 10px;
+}
+
+QTabWidget#mainTabs::tab-bar
+{
+     left: 25px; /* move to the right by 25px */
+}
+
+
+
+/* Central area background */
+QWidget#centralwidget, QProgressDialog, QWindow, QWizard
+{
+    color: silver;
+    background-image: url('%THEMEPATH%/client/stripe.png');
+    background-position: top left;
+    background-repeat:repeat-x;
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 #FFFFFF, stop:0.1 #000000, stop:1 #1F1F1F);
+}
+
+
+QTabWidget#mainTabs::pane
+{ /* The tab widget frame */
+
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 rgba(15, 15, 15, 200), stop:1 #2f2f2f);
+    border-radius: 5px;
+
+}
+
+/* Style the tab using the tab sub-control. Note that it reads QTabBar _not_ QTabWidget */
+QTabWidget#mainTabs > QTabBar::tab
+{
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:1 #555555, stop:0 #333333);
+    color: silver;
+    min-width: 80px;
+    padding:2px;
+    padding-right: 5px;
+    padding-left: 5px;
+}
+
+
+QTabWidget#mainTabs > QTabBar::tab:hover
+{
+    color:#66b9fa;
+    background-color: #606060;
+}
+
+QTabWidget#mainTabs > QTabBar::tab:selected
+{
+    color:#000000;
+    font-weight:bold;
+    background-color: #adadad;
+    border-bottom-left-radius: 5px;
+    border-bottom-right-radius: 5px;
+}
+
+
+QTabWidget#mainTabs > QTabBar::tab:!selected
+{
+    margin-bottom: 8px; /* make non-selected tabs look smaller */
+}
+
+/* Typical widget controls (top tabs, etc) */
+
+QTabWidget#topTabs::pane
+{
+     /* The tab widget frame */
+     border: none;
+     background-color: #2f2f2f;
+ }
+
+
+ QTabWidget#topTabs::tab-bar
+{
+    top: 0px;
+    left: 25px; /* move to the right by 25px */
+ }
+
+
+/* Style the tab using the tab sub-control. Note that it reads QTabBar _not_ QTabWidget */
+QTabWidget#topTabs > QTabBar::tab
+{
+    background-color:#383838;
+    color: silver;
+    min-width: 80px;
+    padding:4px;
+}
+
+
+QTabWidget#topTabs > QTabBar::tab:!selected
+{
+    margin-top:5px;
+    background-color: #414b55;
+
+}
+
+
+QTabWidget#topTabs > QTabBar::tab:hover
+{
+    color:white;
+    background-color: #606060;
+
+}
+
+
+QTabWidget#topTabs > QTabBar::tab:selected
+{
+    color:white;
+    background-color: #758fa0;
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+
+}
+
+QSplitter::handle
+{
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 #0F0F0F, stop:1 #2f2f2f);
+}
+
+
+QSplitter::handle:horizontal
+{
+     width: 8px;
+ }
+
+QSplitter::handle:vertical
+{
+     height: 8px;
+}
+
+/* strangely, this seems to have no effect :( */
+QSplitter::handle:hover
+{
+     background-color: #606060;
+ }
+
+ QDateEdit
+ {
+     margin: 0;
+     background-color: #353535;
+     color: orange;
+ }
+
+ QDateEdit:disabled
+ {
+     color: #8D8B85;
+ }
+
+ QDateEdit::down-arrow
+ {
+     color: orange;
+ }
+
+QSpinBox#minRating, QLineEdit#mapName, #playerName, QSpinBox#quantity, #advQuantity,
+QComboBox#modList, #value1, #value2, #value3, #value4, #value5, #value6, #leaderboardList
+{
+    background-color: #353535;
+    color: orange;
+}
+
+QSpinBox#quantityBox, #pageBox
+{
+    background-color: #353535;
+    color: orange;
+    border: 1 solid;
+    border-color: #555450;
+}
+
+QSpinBox#minRating, QSpinBox#quantity, #advQuantity
+{
+    border-style: solid;
+    border-color: #353535;
+}
+
+QSpinBox#minRating::disabled
+{
+    color: #8D8B85;
+    background-color: #4b4b4b;
+}
+
+QComboBox#filter1, #filter2, #filter3, #filter4, #filter5, #filter6,
+#operator1, #operator2, #operator3, #operator4, #operator5, #operator6
+{
+    background-color: #353535;
+    color: silver;
+}
+
+QToolBox#replayToolBox::tab
+{
+    background-color: rgb(32, 32, 37);
+    color: silver;
+    border-radius: 3px;
+    padding-left: 145px; /* "alignment: center" doesn't work with toolboxes :| */
+}
+
+#advancedSearch, #mapPreview
+{
+    background-color: rgb(32, 32, 37);
+}
+
+QTableView::item:hover
+{
+    background-color: #606060;
+}
+
+QTableView::item:selected
+{
+    background-color: #306030;
+    border:none;
+}
+
+/* Text controls */
+QTextEdit, QPlainTextEdit, QLineEdit, QListWidget, QListView, QTableWidget, QTreeWidget, QFrame#rankedFrame, #teamFaction, #teamSearch, #partyInfo
+{
+    border-style:solid;
+    border-width:1px;
+    border-color:#353535;
+    color:silver;
+    padding:5px;
+    background-color:#202025;
+    alternate-background-color: #303035;
+    border-top-right-radius : 5px;
+    border-top-left-radius : 5px;
+    border-bottom-left-radius : 5px;
+    border-bottom-right-radius : 5px;
+}
+
+QTableView
+{
+    border-style:solid;
+    border-width:1px;
+    border-color:#353535;
+    color:silver;
+    padding:5px;
+    background-color:#202025;
+    alternate-background-color: #303035;
+    border-top-right-radius : 5px;
+    border-top-left-radius : 5px;
+    border-bottom-left-radius : 5px;
+    border-bottom-right-radius : 5px;
+}
+
+/* used in ConnectivityDialog */
+QTableCornerButton::section {
+    background-color:#333333;
+}
+
+QHeaderView {
+    background-color:#202025;
+}
+
+QHeaderView::section
+{
+    color: white;
+    background-color: #4b4b4b;
+    font: bold;
+    border-left: 1 solid;
+
+}
+
+QHeaderView::down-arrow
+{
+    image: url('%THEMEPATH%/client/arrowDown.png');
+}
+
+QHeaderView::up-arrow
+{
+    image: url('%THEMEPATH%/client/arrowUp.png');
+}
+
+QHeaderView#VerticalHeader::section {
+    color:silver;
+    background-color: #333333;
+    border: none;
+    font: normal;
+    min-width: 50px;
+}
+
+QHeaderView#VerticalHeader::section:checked
+{
+    color:white;
+    background-color: #306030;
+    border-bottom: 1px solid;
+    border-color: #202025;
+    width: auto;
+}
+
+QHeaderView#VerticalHeader::section:hover
+{
+    color:silver;
+    font: bold;
+    background-color: #606060;
+    border-bottom: 1px solid;
+    border-color: #202025;
+    width: auto;
+}
+
+/* Modlist */
+QFrame#rankedFrame, #partyInfo
+{
+    border-style:solid;
+    border-width:1px;
+    border-color:#353535;
+    color:silver;
+    padding:5px;
+    background-color:#303038;
+    border-bottom-left-radius : 5px;
+    border-bottom-right-radius : 5px;
+}
+
+
+
+/* Nicklist controls */
+
+QTableWidget::item
+{
+    margin: 0px;
+    border: none;
+    padding:0px;
+}
+
+QTableWidget::item::hover
+{
+    background: #606060;
+    border-radius: 3px;
+}
+
+
+QTableWidget::item:selected, QListWidget::item:previously-selected, QListView::item:previously-selected
+{
+    border: none;
+}
+
+
+
+
+QLineEdit
+{
+    color:orange;
+}
+
+
+
+QListWidget::item:hover, QListView::item:hover
+{
+    border: none;
+    background: #606060;
+    border-radius: 3px;
+}
+
+QListWidget::item:selected, QListView::item:selected, QTreeWidget::item:previously-selected
+{
+    border: none;
+}
+
+QListWidget#modList::item:selected, QListWidget#newsList::item:selected
+
+{
+    background-color: #505050;
+    color: #20A080;
+}
+
+QListWidget#teamList
+{
+    outline: 0;
+}
+
+QListWidget#teamList::item::selected
+{
+    color: white;
+    background-color: #353535;
+}
+
+QListWidget#teamList::item::selected:!active
+{
+    color: silver;
+}
+
+/* for tournament*/
+QListWidget#tourneyList
+{
+    background-image: url('%THEMEPATH%/client/stripe.png');
+    background-position: top left;
+    background-repeat:repeat-x;
+
+    border-style:solid;
+    border-width:1px;
+    border-color:#353535;
+    color:silver;
+    padding:5px;
+    background-color:#0F0F0F;
+    border-top-right-radius : 5px;
+    border-top-left-radius : 5px;
+    border-bottom-left-radius : 5px;
+    border-bottom-right-radius : 5px;
+}
+
+QTreeWidget::item:hover
+{
+    border: none;
+    background: #606060;
+    border-radius: 3px;
+}
+
+QTreeWidget::item:selected
+{
+    border: none;
+    background: #353535;
+    border-radius: 3px;
+}
+
+QTreeWidget::item:previously-selected
+{
+    border: none;
+}
+
+/* ScrollWidgets*/
+QScrollArea
+{
+    border-style:solid;
+    border-width:1px;
+    border-color:#353535;
+    color:silver;
+    padding:5px;
+    background-color:#303038;
+    border-bottom-left-radius : 5px;
+    border-bottom-right-radius : 5px;
+}
+
+
+/* Scrollbars*/
+QScrollBar {
+
+    background-color: grey;
+    width: 15px;
+    margin: 16px 0;
+}
+QScrollBar::handle {
+    background-image: url('%THEMEPATH%/client/drag3.png');
+    background-position: center center;
+    background-repeat:no-repeat;
+    background-color: #2e2d2d;
+    min-height: 24px;
+    border-radius : 2px;
+}
+
+QScrollBar::handle:hover {
+    border-radius : 2px;
+    background-image: url('%THEMEPATH%/client/drag2.png');
+    background-color: #d5d6d6;
+    min-height: 24px;
+}
+
+QScrollBar::sub-line {
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+    background: #2f2f2f;
+    height: 15px;
+    subcontrol-position: top;
+    subcontrol-origin: margin;
+}
+QScrollBar::add-line  {
+
+    border-bottom-left-radius: 3px;
+    border-bottom-right-radius: 3px;
+    background: #2f2f2f;
+    height: 15px;
+    subcontrol-position: bottom;
+    subcontrol-origin: margin;
+}
+
+QScrollBar:down-arrow {
+    background-image: url('%THEMEPATH%/client/scrollDown.png');
+    background-position: center center;
+    background-repeat:no-repeat;
+ }
+
+ QScrollBar:up-arrow {
+    background-image: url('%THEMEPATH%/client/scrollUp.png');
+    background-position: center center;
+    background-repeat:no-repeat;
+
+ }
+
+
+QScrollBar::add-page
+{
+    background-color: #1f1f1f;
+}
+
+QScrollBar::sub-page
+{
+    background-color: #1f1f1f;
+}
+
+QCheckBox#hideGamesWithPw
+{
+    color:white;
+    background-color: #111111;
+}
+
+QLabel#labelSortGames,#labelJoinGame,#labelHostGame,#labelAutomatch,#labelMyReplays,#labelLiveReplays,#labelHostTournament,#labelJoinTournament,#joinLabel,#labelTeamManagement,#labelTMM
+{
+    color:white;
+}
+
+QLabel#labelModHint,#labelMyHint,#labelLiveHint,#labelRankedHint,#labelTeamManagementHint,#labelTeamManagementHint2,#labelTeamManagementHint3
+{
+    color:#AAAAAA;
+}
+
+QLabel#titleLabel
+{
+    color:black;
+    font-weight:bold;
+}
+
+QLabel#labelLoading,#labelAutomatchInfo
+{
+    color: gold;
+}
+
+QGroupBox
+{
+    margin: 5px;
+    border: 1px solid #353535;
+    border-radius: 5px;
+    background-color: rgb(32, 32, 37);
+    color: silver;
+    padding: 5px;
+    padding-top: 15px;
+}
+
+QLabel
+{
+    color: silver;
+}
+
+/* Used for dialogs*/
+QDialog
+{
+    background-color: #575656;
+}
+
+QDialog#MapGenOptionsDialog
+{
+    background-color:#202025;
+    alternate-background-color: #303035;
+}
+
+QCheckBox#spoilerCheckbox, #automaticCheckbox, #showLatestCheckbox, #hideUnrCheckbox, #landRandomDensity::enabled, #plateausRandomDensity::enabled,
+         #mountainsRandomDensity::enabled, #rampsRandomDensity::enabled, #mexRandomDensity::enabled, #reclaimRandomDensity::enabled,
+         #matchUsernameCheckbox
+{
+    color: silver;
+}
+
+QCheckBox#spoilerCheckbox::indicator:unchecked, #automaticCheckbox::indicator:unchecked, #showLatestCheckbox::indicator:unchecked,
+#hideUnrCheckbox::indicator:unchecked, #matchUsernameCheckbox::indicator:unchecked,
+#landRandomDensity::indicator::unchecked, #plateausRandomDensity::indicator::unchecked, #mountainsRandomDensity::indicator::unchecked,
+#rampsRandomDensity::indicator::unchecked, #mexRandomDensity::indicator::unchecked ,#reclaimRandomDensity::indicator::unchecked
+{
+    image: url('%THEMEPATH%/client/chboxUncheked.png');
+ }
+
+QCheckBox#spoilerCheckbox::indicator:checked, #automaticCheckbox::indicator:checked, #showLatestCheckbox::indicator:checked,
+#hideUnrCheckbox::indicator:checked, #matchUsernameCheckbox::indicator:checked,
+#landRandomDensity::indicator::checked, #plateausRandomDensity::indicator::checked, #mountainsRandomDensity::indicator::checked,
+#rampsRandomDensity::indicator::checked, #mexRandomDensity::indicator::checked ,#reclaimRandomDensity::indicator::checked
+{
+    image: url('%THEMEPATH%/client/chboxCheked.png');
+ }
+
+ QCheckBox::enabled
+ {
+     color: silver;
+ }
+
+ QCheckBox::indicator:unchecked
+ {
+    image: url('%THEMEPATH%/client/chboxUnchecked.png');
+ }
+
+ QCheckBox::indicator:checked
+ {
+    image: url('%THEMEPATH%/client/chboxChecked.png');
+ }
+
+/* Used for Ranked Buttons only at the moment*/
+QToolButton#rankedPlay
+{
+	color: silver;
+	border-radius: 5px;
+	border: 1px solid grey;
+}
+
+QToolButton#rankedPlay::disabled
+{
+    color: grey;
+    border-radius: 5px;
+    border: 1px solid darkslategrey;
+}
+
+QToolButton#mapsPool
+{
+	color: silver;
+	border-radius: 5px;
+	border: 1px solid grey;
+}
+
+QToolButton#showTMM
+{
+    color: silver;
+    border: 0.5px solid black;
+}
+
+QToolButton::pressed
+{
+    border: none;
+    color: black;
+    padding:5px;
+    background-color:#383838;
+    border-radius : 5px;
+}
+
+QToolButton::hover
+{
+    border: none;
+
+    color:silver;
+    padding:5px;
+    background-color:#808080;
+    border-radius : 5px;
+ }
+
+QToolButton::checked
+{
+    border: none;
+    border: 2px solid #353535;
+
+    color:black;
+    padding:5px;
+    background-color:#C0C0C0;
+    border-radius : 5px;
+ }
+
+QPushButton#refreshButton, #nextButton, #previousButton, #goToPageButton, #firstButton, #lastButton,
+#resetButton, #searchPlayerButton, #UIButton, #uploadButton, #kickButton, #leaveButton
+{
+    color: silver;
+    background: #202025;
+    border: 1 solid #555450;
+    border-radius: 2;
+}
+
+QPushButton#refreshButton::hover, #nextButton::hover, #previousButton::hover, #goToPageButton::hover,
+#firstButton::hover, #lastButton::hover, #resetButton::hover, #searchPlayerButton::hover,
+#UIButton::hover, #uploadButton::hover,  #kickButton::hover, #leaveButton::hover
+{
+    background-color: #808080;
+}
+
+QPushButton#searchButton, #advSearchButton, #fafDbButton, #spookyDbButton
+{
+	color: silver;
+	border-radius: 5px;
+	border: 2px solid rgb(70, 70, 70);
+    font: bold 12px;
+    min-height: 20px;
+    background-color: rgb(39, 39, 45);
+}
+
+QPushButton#RefreshResetButton, #advResetButton
+{
+	color: silver;
+	border-radius: 5px;
+	border: 1px solid rgb(70, 70, 70);
+    font: 11px;
+    min-height: 20px;
+    background-color: rgb(39, 39, 45);
+}
+
+QPushButton#generateMapButton
+{
+    color: silver;
+	border-radius: 2px;
+	border: 0.5px solid rgb(70, 70, 70);
+    font: bold 14px;
+    min-height: 30px;
+    background-color: rgb(39, 39, 45);
+}
+QPushButton#saveMapGenSettingsButton, #resetMapGenSettingsButton
+{
+    color: silver;
+    border: 0.5px solid rgb(70, 70, 70);
+    background-color: rgb(39, 39, 45);
+}
+QPushButton#saveMapGenSettingsButton::hover, #resetMapGenSettingsButton::hover,#generateMapButton::hover
+{
+    border: none;
+
+    color:silver;
+    padding:5px;
+    background-color:#808080;
+    border-radius : 5px;
+ }
+QPushButton#newsSettings
+{
+    qproperty-icon: url('%THEMEPATH%/client/settings.png');
+    background-color: rgb(39, 39, 45);
+    border: 1px solid rgb(70, 70, 70);
+    border-radius: 2px;
+}
+
+QPushButton#showAllButton
+{
+    qproperty-icon: url('%THEMEPATH%/client/showAll.png');
+    background-color: rgb(39, 39, 45);
+    border: 1px solid rgb(70, 70, 70);
+    border-radius: 2px;
+}
+
+QComboBox, QComboBox:selected, QDoubleSpinBox#mapSize
+{
+    color:orange;
+    selection-color:orange;
+    background-color: #575656;
+    selection-background-color: #575656;
+}
+
+QDoubleSpinBox#mapSize
+{
+    border: 1 solid;
+    border-color: #555450;
+    selection-color: white;
+    selection-background-color: slateblue;
+}
+
+QComboBox QAbstractItemView {
+    border: 2px solid darkgray;
+    selection-background-color: #575656;
+    background-color: #575656;
+}
+
+QFrame#settingsFrame {
+    border-style:solid;
+    border-width:1px;
+    border-color:#353535;
+    background-color:#404040;
+    color:silver;
+    border-top-right-radius : 5px;
+    border-top-left-radius : 5px;
+    border-bottom-left-radius : 5px;
+    border-bottom-right-radius : 5px;
+}

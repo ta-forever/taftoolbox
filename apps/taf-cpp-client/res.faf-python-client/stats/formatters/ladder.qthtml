@@ -1,0 +1,5 @@
+<tr bgcolor="{color}">
+    <td align="center">{rank}</td>
+    <td>{name}</td>
+    <td align="center">{score}</td>
+</tr>
