@@ -3,6 +3,7 @@
 #include <iostream>
 #include <iomanip>
 #include <map>
+#include <regex>
 #include <sstream>
 #include <QtWidgets/qapplication.h>
 #include <QtCore/qcommandlineparser.h>
@@ -116,9 +117,12 @@ void HpiDirectory(
     std::function<bool(const char* /* fileName */, bool /* isDirectory */)> match)
 {
     LOG_DEBUG("[HpiDirectory] gamePath=" << gamePath << ", hpiGlobSpec=" << hpiGlobSpec << ", hpiSubDir=" << hpiSubDir);
-
     // TA does this in alphabetical order
     QStringList hpiFiles = QDir(QString::fromStdString(gamePath)).entryList({ QString::fromStdString(hpiGlobSpec) }, QDir::Files, QDir::Name);
+    if (hpiFiles.empty() && QFile::exists(QString::fromStdString(gamePath + "/" + hpiGlobSpec)))
+    {
+        hpiFiles.append(QString::fromStdString(hpiGlobSpec));
+    }
 
     int nrHpi = 0;
     for (QString hpiFile : hpiFiles)
