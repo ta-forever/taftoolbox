@@ -1,9 +1,10 @@
 #include <algorithm>
+#include <cerrno>
 #include <cmath>
+#include <cstring>
 #include <iostream>
 #include <iomanip>
 #include <map>
-#include <regex>
 #include <sstream>
 #include <QtWidgets/qapplication.h>
 #include <QtCore/qcommandlineparser.h>
@@ -34,7 +35,7 @@ struct HpiArchiveRepository
 {
     struct Archive
     {
-        std::shared_ptr<std::istream> fs;
+        std::shared_ptr<std::ifstream> fs;
         std::shared_ptr<rwe::HpiArchive> hpi;
         std::string hpiPath;
     };
@@ -44,14 +45,29 @@ struct HpiArchiveRepository
 public:
     static rwe::HpiArchive& get(std::string path)
     {
-        Archive& archive = m_archives[path];
-        if (!archive.hpi)
+        try
         {
-            archive.fs.reset(new std::ifstream(path, std::ios::binary));
-            archive.hpi.reset(new rwe::HpiArchive(archive.fs.get()));
-            archive.hpiPath = path;
+            Archive& archive = m_archives[path];
+            if (!archive.hpi)
+            {
+                archive.fs.reset(new std::ifstream(path, std::ios::binary));
+                if (!(*archive.fs))
+                {
+                    std::ostringstream ss;
+                    ss << "bad ifstream:" << archive.fs->rdstate() << ", errno:" << std::strerror(errno);
+                    throw std::runtime_error(ss.str());
+                }
+                archive.hpi.reset(new rwe::HpiArchive(archive.fs.get()));
+                archive.hpiPath = path;
+            }
+            return *archive.hpi;
         }
-        return *archive.hpi;
+        catch (const std::exception& e)
+        {
+            std::ostringstream ss;
+            ss << e.what() << "(" << path << ", m_archive.size()=" << m_archives.size() << ")";
+            throw std::runtime_error(ss.str());
+        }
     }
 };
 
@@ -117,12 +133,9 @@ void HpiDirectory(
     std::function<bool(const char* /* fileName */, bool /* isDirectory */)> match)
 {
     LOG_DEBUG("[HpiDirectory] gamePath=" << gamePath << ", hpiGlobSpec=" << hpiGlobSpec << ", hpiSubDir=" << hpiSubDir);
+
     // TA does this in alphabetical order
     QStringList hpiFiles = QDir(QString::fromStdString(gamePath)).entryList({ QString::fromStdString(hpiGlobSpec) }, QDir::Files, QDir::Name);
-    if (hpiFiles.empty() && QFile::exists(QString::fromStdString(gamePath + "/" + hpiGlobSpec)))
-    {
-        hpiFiles.append(QString::fromStdString(hpiGlobSpec));
-    }
 
     int nrHpi = 0;
     for (QString hpiFile : hpiFiles)
@@ -1086,7 +1099,17 @@ int main(int argc, char *argv[])
             break;
         }
     }
-    LOG_DEBUG("--- app start");
+
+    LOG_DEBUG("-- app start. default maxstdio=" + std::to_string(_getmaxstdio()));
+
+    int maxstdio = 65536;
+    while (_setmaxstdio(maxstdio) != maxstdio)
+    {
+        maxstdio = 9 * maxstdio / 10;
+    }
+    {
+        LOG_DEBUG("set maxstdio=" + std::to_string(_getmaxstdio()));
+    }
 
     QApplication app(argc, argv);
     QApplication::setApplicationName("MapTool");
