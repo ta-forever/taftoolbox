@@ -1100,8 +1100,8 @@ int main(int argc, char *argv[])
         }
     }
 
+#ifdef _WIN32
     LOG_DEBUG("-- app start. default maxstdio=" + std::to_string(_getmaxstdio()));
-
     int maxstdio = 65536;
     while (_setmaxstdio(maxstdio) != maxstdio)
     {
@@ -1110,6 +1110,9 @@ int main(int argc, char *argv[])
     {
         LOG_DEBUG("set maxstdio=" + std::to_string(_getmaxstdio()));
     }
+#else
+    LOG_DEBUG("-- app start");
+#endif
 
     QApplication app(argc, argv);
     QApplication::setApplicationName("MapTool");
