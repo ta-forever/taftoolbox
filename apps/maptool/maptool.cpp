@@ -1,5 +1,7 @@
 #include <algorithm>
+#include <cerrno>
 #include <cmath>
+#include <cstring>
 #include <iostream>
 #include <iomanip>
 #include <map>
@@ -33,7 +35,7 @@ struct HpiArchiveRepository
 {
     struct Archive
     {
-        std::shared_ptr<std::istream> fs;
+        std::shared_ptr<std::ifstream> fs;
         std::shared_ptr<rwe::HpiArchive> hpi;
         std::string hpiPath;
     };
@@ -43,14 +45,29 @@ struct HpiArchiveRepository
 public:
     static rwe::HpiArchive& get(std::string path)
     {
-        Archive& archive = m_archives[path];
-        if (!archive.hpi)
+        try
         {
-            archive.fs.reset(new std::ifstream(path, std::ios::binary));
-            archive.hpi.reset(new rwe::HpiArchive(archive.fs.get()));
-            archive.hpiPath = path;
+            Archive& archive = m_archives[path];
+            if (!archive.hpi)
+            {
+                archive.fs.reset(new std::ifstream(path, std::ios::binary));
+                if (!(*archive.fs))
+                {
+                    std::ostringstream ss;
+                    ss << "bad ifstream:" << archive.fs->rdstate() << ", errno:" << std::strerror(errno);
+                    throw std::runtime_error(ss.str());
+                }
+                archive.hpi.reset(new rwe::HpiArchive(archive.fs.get()));
+                archive.hpiPath = path;
+            }
+            return *archive.hpi;
         }
-        return *archive.hpi;
+        catch (const std::exception& e)
+        {
+            std::ostringstream ss;
+            ss << e.what() << "(" << path << ", m_archive.size()=" << m_archives.size() << ")";
+            throw std::runtime_error(ss.str());
+        }
     }
 };
 
@@ -949,7 +966,16 @@ QImage createResourceMapImage(const rwe::TntArchive& tnt, const ta::TdfFile& ota
 
     std::vector< std::tuple<int, int, std::string> > mapFeatures;
     appendTntFileFeatures(tnt, mapFeatures);
+    for (auto& tup : mapFeatures)
+    {
+        LOG_DEBUG("Tnt features:" << std::get<0>(tup) << ',' << std::get<1>(tup) << ',' << std::get<2>(tup));
+    }
     appendOtaFileFeatures(ota, maxPositions, mapFeatures);
+    for (auto& tup : mapFeatures)
+    {
+        LOG_DEBUG("Tnt+Ota features:" << std::get<0>(tup) << ',' << std::get<1>(tup) << ',' << std::get<2>(tup));
+    }
+
     auto matchingFeatures = lookupFeatureValues(mapFeatures, featureLibrary, matchKey, matchValue, valueKey);
     auto normalisedMatchingFeatures = normaliseFeatures(matchingFeatures);
     auto areaValues = voronoiAccumulateFeatures(matchingFeatures, startPositions);
@@ -1082,7 +1108,20 @@ int main(int argc, char *argv[])
             break;
         }
     }
-    LOG_DEBUG("--- app start");
+
+#ifdef _WIN32
+    LOG_DEBUG("-- app start. default maxstdio=" + std::to_string(_getmaxstdio()));
+    int maxstdio = 65535;
+    while (_setmaxstdio(maxstdio) != maxstdio)
+    {
+        maxstdio = 9 * maxstdio / 10;
+    }
+    {
+        LOG_DEBUG("set maxstdio=" + std::to_string(_getmaxstdio()));
+    }
+#else
+    LOG_DEBUG("-- app start");
+#endif
 
     QApplication app(argc, argv);
     QApplication::setApplicationName("MapTool");
@@ -1091,7 +1130,7 @@ int main(int argc, char *argv[])
     parser.setApplicationDescription("Maptool for working with TA maps");
     parser.addHelpOption();
     parser.addOption(QCommandLineOption("gamepath", "Path in which TA is located.", "gamepath"));
-    parser.addOption(QCommandLineOption("hpispecs", "Search specs for HPI files.", "hpispecs", "*.hpi;*.gpf;rev31.gp3;*.ccx;*.ufo"));
+    parser.addOption(QCommandLineOption("hpispecs", "Search specs for HPI files.", "hpispecs", "*.hpi;*.gpf;*.ccx;rev31.gp3;*.ufo"));
     parser.addOption(QCommandLineOption("mapname", "map names to match (starts with).", "mapname", ""));
     parser.addOption(QCommandLineOption("hash", "Calculate hash for the map(s)."));
     parser.addOption(QCommandLineOption("thumb", "Create thumbnail image(s) for the map(s) in the given directory.", "thumb", "./"));
@@ -1184,6 +1223,9 @@ int main(int argc, char *argv[])
                     {
                         if (isInterestingFeature(f.second))
                         {
+                            std::ostringstream ss;
+                            f.second.dumpjson(ss);
+                            LOG_DEBUG("file:" << p.second.archivePath << '/' << p.second.filePath << ", feature:" << f.first << ", " << ss.str());
                             allFeatures.children[f.first] = f.second;
                         }
                     }
