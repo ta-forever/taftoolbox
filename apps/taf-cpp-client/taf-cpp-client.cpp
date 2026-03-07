@@ -1,5 +1,7 @@
 #include <QtCore/qcommandlineparser.h>
 #include <QtCore/qcryptographichash.h>
+#include <QtCore/qdir.h>
+#include <QtCore/qstandardpaths.h>
 #include <QtNetwork/qhostaddress.h>
 #include <QtNetwork/qnetworkaccessmanager.h>
 #include <QtNetwork/qnetworkrequest.h>
@@ -18,9 +20,12 @@
 #include "MainWindow.h"
 #include "TafService.h"
 #include "games/GameService.h"
+#include "games/IceAdapterService.h"
+#include "games/GameLauncherService.h"
 #include "maps/MapService.h"
 #include "mods/ModService.h"
 #include "player/PlayerService.h"
+#include "preferences/PreferencesService.h"
 #include "ta/MapTool.h"
 
 #include <iostream>
@@ -40,15 +45,40 @@ int doMain(int argc, char* argv[])
     parser.addOption(QCommandLineOption("loglevel", "level of noise in log files. 0 (silent) to 5 (debug).", "logfile", "5"));
     parser.addOption(QCommandLineOption(
         "serverConfigUrl", "url from which to retrieve server config data","serverConfigUrl", "https://content.taforever.com/dfc-config.json"));
+    parser.addOption(QCommandLineOption(
+        "native-dir",
+        "Path to directory containing native binaries (maptool.exe, gpgnet4ta.exe, "
+        "talauncher.exe, faf-uid.exe, faf-ice-adapter.jar). "
+        "Overrides the saved preference and is persisted for future runs.",
+        "path"));
     parser.process(app);
 
-    taflib::Logger::Initialise(parser.value("logfile").toStdString(), taflib::Logger::Verbosity(parser.value("loglevel").toInt()));
+    QString logFile = parser.value("logfile");
+    if (logFile.isEmpty())
+    {
+        QString logDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/logs";
+        QDir().mkpath(logDir);
+        logFile = logDir + "/client.log";
+    }
+    taflib::Logger::Initialise(logFile.toStdString(), taflib::Logger::Verbosity(parser.value("loglevel").toInt()));
     qInstallMessageHandler(taflib::Logger::Log);
+
+    // PreferencesService must be first — other services depend on it
+    PreferencesService::initialise(&app);
+
+    // --native-dir overrides (and persists) the saved nativeDir preference
+    if (parser.isSet("native-dir"))
+        PreferencesService::getInstance()->setNativeDir(parser.value("native-dir"));
+
+    QString nativeDir = PreferencesService::getInstance()->getNativeDir();
+    QString mapsCache = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/maps";
+    MapTool::initialise(nativeDir + "/bin/maptool.exe", mapsCache);
 
     TafService::initialise(&app);
     GameService::initialise(&app);
+    IceAdapterService::initialise(&app);
+    GameLauncherService::initialise(&app);
     MapService::initialise(&app);
-    MapTool::initialise("C:/Program Files/TA Forever Client/natives/bin/maptool.exe", "C:/ProgramData/TAForever/cache/maps");
     ModService::initialise();
     PlayerService::initialise(&app);
 
@@ -67,7 +97,7 @@ int doMain(int argc, char* argv[])
     TafService::getInstance()->getDfcConfig(parser.value("serverConfigUrl"), [loginDialog](QSharedPointer<DtoTableModel<TafEndpoints> > endpointsTableModel) {
         loginDialog->setTafEndpoints(endpointsTableModel);
     });
-    
+
     loginDialog->show();
     app.exec();
     return 0;

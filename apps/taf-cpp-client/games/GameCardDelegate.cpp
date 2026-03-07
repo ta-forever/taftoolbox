@@ -46,13 +46,18 @@ void GameCardDelegate::paint(QPainter* painter, const QStyleOptionViewItem& opti
 
     QString previewFilename = MapService::getInstance()->getPreviewCacheFilePath(gameInfo->mapName, MapPreviewType::Mini, 10);
 
+    bool selected = option.state & QStyle::State_Selected;
+
     painter->save();
     _drawClearOption(painter, option);
     _drawIconShadow(painter, option);
     _drawIconBackground(painter, option);
     _drawIcon(painter, option, _getIconCache(previewFilename));
     _drawFrame(painter, option);
+    _drawStatusIcon(painter, option, gameInfo->state);
     _drawText(painter, option, text);
+    if (selected)
+        _drawSelectionFrame(painter, option);
     painter->restore();
 }
 
@@ -123,6 +128,7 @@ void GameCardDelegate::_drawText(QPainter* painter, const QStyleOptionViewItem& 
     int topOffset = TEXT_OFFSET;
     int rightOffset = TEXT_RIGHT_MARGIN;
     int bottomOffset = 0;
+    painter->save();
     painter->translate(
         option.rect.left() + leftOffset,
         option.rect.top() + topOffset);
@@ -133,6 +139,26 @@ void GameCardDelegate::_drawText(QPainter* painter, const QStyleOptionViewItem& 
     QTextDocument html;
     html.setHtml(text);
     html.drawContents(painter, clip);
+    painter->restore();
+}
+
+void GameCardDelegate::_drawStatusIcon(QPainter* painter, const QStyleOptionViewItem& option, const QString& state) const
+{
+    QString iconPath;
+    if (state == "staging" || state == "open")
+        iconPath = ":/res/games/hosting.png";
+    else if (state == "battleroom")
+        iconPath = ":/res/games/hosted.png";
+    else if (!state.isEmpty() && state.compare("ENDED", Qt::CaseInsensitive) != 0)
+        iconPath = ":/res/games/playing.png";  // "live" or any other active state
+
+    if (iconPath.isEmpty())
+        return;
+
+    QIcon& icon = _getStatusIconCache(iconPath);
+    int x = option.rect.left() + ICON_CLIP_TOP_LEFT + ICON_RECT - STATUS_ICON_SIZE - 2;
+    int y = option.rect.top()  + ICON_CLIP_TOP_LEFT + ICON_RECT - STATUS_ICON_SIZE - 2;
+    icon.paint(painter, x, y, STATUS_ICON_SIZE, STATUS_ICON_SIZE);
 }
 
 QIcon& GameCardDelegate::_getIconCache(QString filename) const
@@ -142,12 +168,33 @@ QIcon& GameCardDelegate::_getIconCache(QString filename) const
         filename = UNKNOWN_MAP_FILE_PATH;
     }
 
-    QSharedPointer<QIcon> & icon = m_iconCache[filename];
+    QSharedPointer<QIcon>& icon = m_iconCache[filename];
     if (icon.isNull())
     {
         QPixmap pixmap(filename);
         pixmap = pixmap.scaled(ICON_RECT, ICON_RECT, Qt::KeepAspectRatio, Qt::SmoothTransformation);
         icon.reset(new QIcon(pixmap));
     }
+    return *icon;
+}
+
+void GameCardDelegate::_drawSelectionFrame(QPainter* painter, const QStyleOptionViewItem& option) const
+{
+    QPen pen;
+    pen.setWidth(SELECTED_FRAME_THICKNESS);
+    pen.setColor(SELECTED_FRAME_COLOR);
+    pen.setJoinStyle(Qt::MiterJoin);
+    painter->setPen(pen);
+    painter->setBrush(Qt::NoBrush);
+    // Inset by half the pen width so the stroke sits fully inside the cell rect
+    int half = SELECTED_FRAME_THICKNESS / 2;
+    painter->drawRect(option.rect.adjusted(half, half, -half, -half));
+}
+
+QIcon& GameCardDelegate::_getStatusIconCache(const QString& filename) const
+{
+    QSharedPointer<QIcon>& icon = m_statusIconCache[filename];
+    if (icon.isNull())
+        icon.reset(new QIcon(filename));
     return *icon;
 }

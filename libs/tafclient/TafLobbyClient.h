@@ -3,6 +3,8 @@
 #include "TafLobbyJsonProtocol.h"
 
 #include "QtCore/qdatastream.h"
+#include "QtCore/qjsonarray.h"
+#include "QtCore/qjsonvalue.h"
 #include "QtNetwork/qtcpsocket.h"
 
 struct TafLobbyPlayerInfo
@@ -72,18 +74,26 @@ public:
     ~TafLobbyClient();
 
     void connectToHost(QString hostName, quint16 port);
+    void disconnectFromHost();
+    bool isConnected() const;
     void sendAskSession();
     void sendHello(qint64 session, QString uniqueId, QString localIp, QString login, QString password);
     void requestHostGame(QString title, QString password, QString mod, QString mapname, QString visibility, int replayDelaySeconds, QString ratingType);
+    void requestJoinGame(int gameId, QString password);
+    void sendIceMessage(int remotePlayerId, QJsonValue iceMsg);
+    void sendGpgGameMsg(QString command, QJsonArray args);
     void sendPong();
 
 signals:
+    void connectionStateChanged(bool connected);
     void notice(QString style, QString text);
     void session(qint64 sessionId);
     void welcome(QSharedPointer<TafLobbyPlayerInfo> playerInfo);
     void playerInfo(QSharedPointer<TafLobbyPlayerInfo> playerInfo);
     void gameInfo(QSharedPointer<TafLobbyGameInfo> gameInfo);
     void gameLaunch(QSharedPointer<GameLaunchMsg> gameLaunchMsg);
+    void iceServersReceived(QJsonArray iceServers);
+    void gpgGameMsg(QString command, QJsonArray args);
 
 private:
     TafLobbyJsonProtocol m_protocol;

@@ -112,6 +112,17 @@ void TafLobbyClient::connectToHost(QString hostName, quint16 port)
     m_port = port;
 }
 
+void TafLobbyClient::disconnectFromHost()
+{
+    qInfo() << "[TafLobbyClient::disconnectFromHost]";
+    m_socket.abort();   // immediate close; timerEvent will reconnect within 1 s
+}
+
+bool TafLobbyClient::isConnected() const
+{
+    return m_socket.state() == QAbstractSocket::ConnectedState;
+}
+
 void TafLobbyClient::sendAskSession()
 {
     qInfo() << "[TafLobbyClient::sendAskSession]";
@@ -141,13 +152,44 @@ void TafLobbyClient::requestHostGame(QString title, QString password, QString mo
     QJsonObject cmd;
     cmd.insert("command", "game_host");
     cmd.insert("title", title);
-    cmd.insert("password", password);
+    if (!password.isEmpty())
+        cmd.insert("password", password);
     cmd.insert("mod", mod);
     cmd.insert("mapname", mapname);
     cmd.insert("visibility", visibility);
     cmd.insert("replay_delay_seconds", replayDelaySeconds);
     cmd.insert("rating_type", ratingType);
     cmd.insert("enforce_rating_range", false);
+    m_protocol.sendJson(cmd);
+}
+
+void TafLobbyClient::requestJoinGame(int gameId, QString password)
+{
+    qInfo() << "[TafLobbyClient::requestJoinGame]" << gameId;
+    QJsonObject cmd;
+    cmd.insert("command", "game_join");
+    cmd.insert("uid", gameId);
+    if (!password.isEmpty())
+        cmd.insert("password", password);
+    m_protocol.sendJson(cmd);
+}
+
+void TafLobbyClient::sendIceMessage(int remotePlayerId, QJsonValue iceMsg)
+{
+    QJsonObject cmd;
+    cmd.insert("target", "game");
+    cmd.insert("command", "IceMsg");
+    cmd.insert("args", QJsonArray{ remotePlayerId, iceMsg });
+    m_protocol.sendJson(cmd);
+}
+
+void TafLobbyClient::sendGpgGameMsg(QString command, QJsonArray args)
+{
+    qInfo() << "[TafLobbyClient::sendGpgGameMsg]" << command << args;
+    QJsonObject cmd;
+    cmd.insert("target", "game");
+    cmd.insert("command", command);
+    cmd.insert("args", args);
     m_protocol.sendJson(cmd);
 }
 
@@ -165,11 +207,13 @@ void TafLobbyClient::onSocketStateChanged(QAbstractSocket::SocketState socketSta
         if (socketState == QAbstractSocket::UnconnectedState)
         {
             qWarning() << "[TafLobbyClient::onSocketStateChanged] socket disconnected";
+            emit connectionStateChanged(false);
         }
         else if (socketState == QAbstractSocket::ConnectedState)
         {
             qInfo() << "[TafLobbyClient::onSocketStateChanged] socket connected";
             sendAskSession();
+            emit connectionStateChanged(true);
         }
     }
     catch (const std::exception & e)
@@ -251,6 +295,16 @@ void TafLobbyClient::onReadyRead()
             else if (it.value() == "game_launch")
             {
                 emit gameLaunch(QSharedPointer<GameLaunchMsg>::create(cmd));
+            }
+            else if (it.value() == "ice_servers")
+            {
+                emit iceServersReceived(cmd.value("ice_servers").toArray());
+            }
+            else if (it.value() == "HostGame"  || it.value() == "JoinGame"  ||
+                     it.value() == "ConnectToPeer" || it.value() == "DisconnectFromPeer" ||
+                     it.value() == "IceMsg")
+            {
+                emit gpgGameMsg(it.value().toString(), cmd.value("args").toArray());
             }
             else if (it.value() == "ping")
             {

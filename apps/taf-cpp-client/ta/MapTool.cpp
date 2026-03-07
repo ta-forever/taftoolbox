@@ -127,7 +127,7 @@ MapListSignal* MapTool::run(
 
 MapListSignal* MapTool::listMap(QString gamePath, QString mapName)
 {
-    return run(m_mapToolExePath, gamePath, QString(), mapName + "$", true, QString(), QString(), 0, QString());
+    return run(m_mapToolExePath, gamePath, QString(), mapName + "$", true, QString(), QString(), 0, m_cacheDirectory);
 }
 
 MapListSignal* MapTool::listMapsInstalled(QString gamePath, bool doCrc)
@@ -138,7 +138,7 @@ MapListSignal* MapTool::listMapsInstalled(QString gamePath, bool doCrc)
 MapListSignal* MapTool::listMapsInArchive(QString hpiFile, bool doCrc)
 {
     QFileInfo hpiFileInfo(hpiFile);
-    return run(m_mapToolExePath, hpiFileInfo.dir().absolutePath(), hpiFileInfo.baseName(), QString(), doCrc, m_cacheDirectory, "mini", 0, QString());
+    return run(m_mapToolExePath, hpiFileInfo.dir().absolutePath(), hpiFileInfo.baseName(), QString(), doCrc, m_cacheDirectory, "mini", 0, m_cacheDirectory);
 }
 
 MapListSignal* MapTool::generatePreview(QString gamePath, QString mapName, QString previewType, int positionCount)

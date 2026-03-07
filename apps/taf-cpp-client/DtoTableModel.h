@@ -41,7 +41,9 @@ public:
 
     void clear()
     {
-        beginRemoveRows(QModelIndex(), 0, m_items.size() -1);
+        if (m_items.isEmpty())
+            return;
+        beginRemoveRows(QModelIndex(), 0, m_items.size() - 1);
         m_items.clear();
         m_itemsById.clear();
         endRemoveRows();

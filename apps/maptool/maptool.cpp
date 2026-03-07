@@ -1111,7 +1111,11 @@ int main(int argc, char *argv[])
 
 #ifdef _WIN32
     LOG_DEBUG("-- app start. default maxstdio=" + std::to_string(_getmaxstdio()));
+#ifdef _DEBUG
+    int maxstdio = 8192;  // debug CRT asserts on values above 8192
+#else
     int maxstdio = 65535;
+#endif
     while (_setmaxstdio(maxstdio) != maxstdio)
     {
         maxstdio = 9 * maxstdio / 10;

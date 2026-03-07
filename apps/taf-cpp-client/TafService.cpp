@@ -3,6 +3,7 @@
 #include <QtNetwork/qnetworkrequest.h>
 #include <QtNetwork/qnetworkreply.h>
 #include <QtCore/qcoreapplication.h>
+#include <QtCore/qprocess.h>
 #include <QtCore/qjsondocument.h>
 #include <QtCore/qjsonobject.h>
 #include <QtCore/qjsonarray.h>
@@ -10,6 +11,7 @@
 #include "api/FeaturedModDto.h"
 #include "TafEndpoints.h"
 #include "preferences/LoginPreferences.h"
+#include "preferences/PreferencesService.h"
 
 TafService* TafService::m_tafService = NULL;
 
@@ -20,9 +22,25 @@ TafService::TafService(QObject *parent):
     qInfo() << "[TafService::TafService]";
     QObject::connect(&m_tafLobbyClient, &TafLobbyClient::session, [this](quint64 sessionId) {
         LoginPreferences loginPreferences(this);
-        QString uid = "0"; // TafHwIdGenerator("C:/Program Files/TA Forever Client/natives/faf-uid.exe").get(sessionId);
+        QString nativeDir = PreferencesService::getInstance()->getNativeDir();
         QString password = QCryptographicHash::hash(loginPreferences.getPassword().toUtf8(), QCryptographicHash::Sha256).toHex();
-        m_tafLobbyClient.sendHello(sessionId, uid, "0.0.0.0", loginPreferences.getUserName(), password);
+        QString login    = loginPreferences.getUserName();
+
+        QProcess* uidProcess = new QProcess(this);
+        QObject::connect(uidProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+            [this, uidProcess, sessionId, login, password](int, QProcess::ExitStatus) {
+                QString uid = QString::fromUtf8(uidProcess->readAll()).trimmed();
+                if (uid.isEmpty()) uid = "0";
+                m_tafLobbyClient.sendHello(sessionId, uid, "0.0.0.0", login, password);
+                uidProcess->deleteLater();
+            });
+        QObject::connect(uidProcess, &QProcess::errorOccurred,
+            [this, uidProcess, sessionId, login, password](QProcess::ProcessError) {
+                qWarning() << "[TafService] faf-uid failed to start";
+                m_tafLobbyClient.sendHello(sessionId, "0", "0.0.0.0", login, password);
+                uidProcess->deleteLater();
+            });
+        uidProcess->start(nativeDir + "/faf-uid.exe", QStringList() << QString::number(sessionId));
     });
 }
 

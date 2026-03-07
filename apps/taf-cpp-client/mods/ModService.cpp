@@ -1,6 +1,10 @@
 #include "ModService.h"
 
+#include "preferences/PreferencesService.h"
 #include "taflib/Logger.h"
+
+#include <QtCore/qdir.h>
+#include <QtWidgets/qfiledialog.h>
 
 ModService* ModService::m_instance = 0;
 
@@ -20,21 +24,15 @@ ModService::ModService()
 
 QString ModService::getModPath(QString featuredMod)
 {
-    if (0 == featuredMod.compare("tacc", Qt::CaseInsensitive))
-    {
-        return "d:/games/TA";
-    }
-    else if (0 == featuredMod.compare("tavmod", Qt::CaseInsensitive))
-    {
-        return "d:/games/ProTA";
-    }
-    else if (0 == featuredMod.compare("taesc", Qt::CaseInsensitive))
-    {
-        return "d:/games/TAESC";
-    }
-    else
-    {
-        qInfo() << "[ModService::getModPath] unknown mod";
-        return QString();
-    }
+    QString path = PreferencesService::getInstance()->getModPath(featuredMod);
+    if (!path.isEmpty() && QDir(path).exists())
+        return path;
+
+    qInfo() << "[ModService::getModPath] no saved path for" << featuredMod << "- prompting user";
+    path = QFileDialog::getExistingDirectory(
+        nullptr,
+        QString("Locate %1 game installation folder").arg(featuredMod));
+    if (!path.isEmpty())
+        PreferencesService::getInstance()->setModPath(featuredMod, path);
+    return path;
 }
