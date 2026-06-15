@@ -20,6 +20,7 @@ public:
         WindStr,
         TidalStr,
         GravityStr,
+        WaterPercentInt,
         _COLUMN_COUNT
     };
 
@@ -39,6 +40,7 @@ public:
     QString wind;
     QString tidal;
     QString gravity;
+    int waterPercent;
 };
 
 Q_DECLARE_METATYPE(MapToolDto);

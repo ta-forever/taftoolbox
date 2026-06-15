@@ -3,6 +3,7 @@
 
 MapToolDto::MapToolDto()
 {
+    waterPercent = 0;
 }
 
 MapToolDto::MapToolDto(const QStringList &mapDetails)
@@ -22,6 +23,7 @@ MapToolDto::MapToolDto(const QStringList &mapDetails)
     wind = mapDetails[6];
     tidal = mapDetails[7];
     gravity = mapDetails[8];
+    waterPercent = mapDetails.size() > 9 ? mapDetails[9].toInt() : 0;
 }
 
 QVariant MapToolDto::get(Fields f) const
@@ -38,6 +40,7 @@ QVariant MapToolDto::get(Fields f) const
     case Fields::WindStr: return QVariant::fromValue(wind);
     case Fields::TidalStr: return QVariant::fromValue(tidal);
     case Fields::GravityStr: return QVariant::fromValue(gravity);
+    case Fields::WaterPercentInt: return QVariant::fromValue(waterPercent);
     }
     return QVariant();
 }
