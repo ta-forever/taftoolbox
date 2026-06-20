@@ -6,6 +6,7 @@
 #include <QtCore/qjsonobject.h>
 #include <QtCore/qjsonarray.h>
 #include <QtCore/qjsonvalue.h>
+#include <QtCore/qdebug.h>
 #include <QtNetwork/qnetworkreply.h>
 
 #include "TafEndpoints.h"

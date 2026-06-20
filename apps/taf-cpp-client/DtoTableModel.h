@@ -2,6 +2,7 @@
 
 #include <QtCore/qmap.h>
 #include <QtCore/qabstractitemmodel.h>
+#include <QtCore/qdebug.h>
 
 template<typename T>
 class DtoTableModel : public QAbstractTableModel
