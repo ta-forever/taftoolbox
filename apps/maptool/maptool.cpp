@@ -263,6 +263,15 @@ std::vector<std::uint8_t> readHeightMap(const rwe::TntArchive& tnt)
     return heights;
 }
 
+std::vector<rwe::TntTileAttributes> readTileAttributes(const rwe::TntArchive& tnt)
+{
+    const int width = tnt.getHeader().width;
+    const int height = tnt.getHeader().height;
+    std::vector<rwe::TntTileAttributes> tileAttributes(width * height);
+    tnt.readMapAttributes(tileAttributes.data());
+    return tileAttributes;
+}
+
 std::vector<std::uint8_t> lowpass(const std::vector<std::uint8_t> &data, int width, int height, int radius)
 {
     LOG_DEBUG("[lowpass]");
@@ -321,10 +330,6 @@ QImage createHeightMapImage(const rwe::TntArchive& tnt)
     const int height = tnt.getHeader().height;
     LOG_DEBUG("[createHeightMapImage] tnt:" << width << 'x' << height);
     std::vector<std::uint8_t> heights = readHeightMap(tnt);
-    std::vector<std::uint8_t> lpfHeights = lowpass(heights, width, height, 3);
-    
-    double meanHeight, stdevHeight;
-    meanStdev(lpfHeights, meanHeight, stdevHeight);
 
     QImage im(width, height, QImage::Format_RGB888);
     im.fill(65535u);
@@ -333,14 +338,41 @@ QImage createHeightMapImage(const rwe::TntArchive& tnt)
         int x = n % width;
         int y = n / width;
         std::uint8_t h = heights[n];
-        if (stdevHeight > 1.0)
-        {
-            double z = (h - meanHeight) / stdevHeight;
-            z = 128.0 + z * 128.0 / 3.0;
-            h = std::min(std::max(z, 0.0), 255.0);
-        }
         im.setPixel(x, y, qRgb(h, h, h));
     }
+    return im;
+}
+
+bool isWaterTile(const rwe::TntArchive& tnt, const rwe::TntTileAttributes& tileAttribute)
+{
+    return tnt.getHeader().seaLevel > 0 && tileAttribute.height < tnt.getHeader().seaLevel;
+}
+
+QImage createHeightMapWithWaterImage(const rwe::TntArchive& tnt)
+{
+    const int width = tnt.getHeader().width;
+    const int height = tnt.getHeader().height;
+    LOG_DEBUG("[createHeightMapWithWaterImage] tnt:" << width << 'x' << height);
+
+    QImage im = createHeightMapImage(tnt);
+    std::vector<rwe::TntTileAttributes> tileAttributes = readTileAttributes(tnt);
+
+    for (int n=0; n<width*height; ++n)
+    {
+        if (!isWaterTile(tnt, tileAttributes[n]))
+        {
+            continue;
+        }
+
+        int x = n % width;
+        int y = n / width;
+        QRgb base = im.pixel(x, y);
+        im.setPixel(x, y, qRgb(
+            (qRed(base) * 175 + 35 * 80) / 255,
+            (qGreen(base) * 175 + 90 * 80) / 255,
+            (qBlue(base) * 175 + 210 * 80) / 255));
+    }
+
     return im;
 }
 
@@ -418,7 +450,7 @@ void lsMap(std::ostream& os, const std::string& context, const std::string &hpiA
             std::ostringstream ss;
             ss << context
                 << UNIT_SEPARATOR << hpiFileInfo.fileName().toStdString()
-                << UNIT_SEPARATOR << std::hex << std::setw(8) << std::setfill('0') << crc
+                << UNIT_SEPARATOR << std::hex << std::setw(8) << std::setfill('0') << crc << std::dec
                 << UNIT_SEPARATOR << tdfRootValues["missiondescription"]
                 << UNIT_SEPARATOR << tdfRootValues["size"]
                 << UNIT_SEPARATOR << tdfRootValues["numplayers"]
@@ -798,6 +830,18 @@ double resize(QImage& im, int nominalSize)
     return scale;
 }
 
+double resizeToMapDimensions(QImage& im, const rwe::TntArchive& tnt, int nominalSize)
+{
+    LOG_DEBUG("[resizeToMapDimensions(QImage)]");
+    int mapWidth = tnt.getHeader().width;
+    int mapHeight = tnt.getHeader().height;
+    int currentSize = std::max(mapWidth, mapHeight);
+    double scale = double(nominalSize) / double(currentSize);
+
+    im = im.scaled(int(scale * double(mapWidth) + 0.5), int(scale * double(mapHeight) + 0.5));
+    return scale;
+}
+
 QImage createPositionsMapImage(const rwe::TntArchive& tnt, const ta::TdfFile& ota, QVector<uint> palette, int positionCount, int nominalSize)
 {
     LOG_DEBUG("[createPositionsMapImage]");
@@ -807,6 +851,35 @@ QImage createPositionsMapImage(const rwe::TntArchive& tnt, const ta::TdfFile& ot
     im.setColorTable(palette);
     im = im.convertToFormat(QImage::Format_RGB888);
     scale *= resize(im, nominalSize);
+
+    QPainter painter(&im);
+
+    const std::vector< std::pair<int, int> > startPositions = getStartingPositions(ota, positionCount);
+
+    int positionNumber = startPositions.size();
+    for (auto it=startPositions.rbegin(); it!=startPositions.rend(); ++it, --positionNumber)
+    {
+        Qt::GlobalColor back = positionNumber <= positionCount ? Qt::darkBlue : Qt::gray;
+        Qt::GlobalColor fore = positionNumber <= positionCount ? Qt::white : Qt::black;
+        drawLabel(painter, int(scale* it->first+0.5), int(scale* it->second+0.5), 20, QString::number(positionNumber), back, fore);
+    }
+
+    return im;
+}
+
+QImage createTransparentMapImage(const rwe::TntArchive& tnt, int nominalSize)
+{
+    QImage im(tnt.getHeader().width, tnt.getHeader().height, QImage::Format_ARGB32);
+    im.fill(Qt::transparent);
+    resizeToMapDimensions(im, tnt, nominalSize);
+    return im;
+}
+
+QImage createPositionsOverlayImage(const rwe::TntArchive& tnt, const ta::TdfFile& ota, int positionCount, int nominalSize)
+{
+    LOG_DEBUG("[createPositionsOverlayImage]");
+    QImage im = createTransparentMapImage(tnt, nominalSize);
+    double scale = double(im.width()) / double(tnt.getHeader().width);
 
     QPainter painter(&im);
 
@@ -944,14 +1017,14 @@ std::vector<std::tuple<int, int, int> > normaliseFeatures(const std::vector<std:
     return normalisedFeatures;
 }
 
-QImage createResourceMapImage(const rwe::TntArchive& tnt, const ta::TdfFile& ota, const ta::TdfFile& featureLibrary, int maxPositions, Qt::GlobalColor background, Qt::GlobalColor foreground,
+QImage createResourceOverlayImage(const rwe::TntArchive& tnt, const ta::TdfFile& ota, const ta::TdfFile& featureLibrary, int maxPositions, Qt::GlobalColor background, Qt::GlobalColor foreground,
     const std::string &matchKey, const std::string &matchValue, const std::string &valueKey, int resourceScaleFactor, int nominalSize)
 {
-    LOG_DEBUG("[createResourceMapImage] matchKey=" << matchKey << ", matchValue=" << matchValue << ", valueKey=" << valueKey);
+    LOG_DEBUG("[createResourceOverlayImage] matchKey=" << matchKey << ", matchValue=" << matchValue << ", valueKey=" << valueKey);
 
     Qt::GlobalColor summaryColour = foreground; // Qt::GlobalColor(int(Qt::transparent) - int(foreground));
-    QImage im = createHeightMapImage(tnt);
-    double scale = resize(im, nominalSize);
+    QImage im = createTransparentMapImage(tnt, nominalSize);
+    double scale = double(im.width()) / double(tnt.getHeader().width);
 
     std::vector<std::pair<int, int> > startPositions = getStartingPositions(ota, maxPositions);
     if (startPositions.size() > unsigned(maxPositions))
@@ -1005,6 +1078,21 @@ QImage createResourceMapImage(const rwe::TntArchive& tnt, const ta::TdfFile& ota
     return im;
 }
 
+QImage createResourceMapImage(const rwe::TntArchive& tnt, const ta::TdfFile& ota, const ta::TdfFile& featureLibrary, int maxPositions, Qt::GlobalColor background, Qt::GlobalColor foreground,
+    const std::string &matchKey, const std::string &matchValue, const std::string &valueKey, int resourceScaleFactor, int nominalSize)
+{
+    LOG_DEBUG("[createResourceMapImage] matchKey=" << matchKey << ", matchValue=" << matchValue << ", valueKey=" << valueKey);
+
+    QImage im = createHeightMapImage(tnt);
+    resize(im, nominalSize);
+
+    QPainter painter(&im);
+    painter.drawImage(0, 0, createResourceOverlayImage(tnt, ota, featureLibrary, maxPositions, background, foreground,
+        matchKey, matchValue, valueKey, resourceScaleFactor, nominalSize));
+
+    return im;
+}
+
 QImage createMapImage(const rwe::TntArchive& tnt, const ta::TdfFile& ota, const ta::TdfFile& allFeatures, QVector<uint> palette, QString type, int maxPositions, int nominalSize)
 {
     LOG_DEBUG("[createMapImage] type=" << type.toStdString() << ", maxPositions=" << maxPositions << ", nominalSize=" << nominalSize);
@@ -1013,27 +1101,60 @@ QImage createMapImage(const rwe::TntArchive& tnt, const ta::TdfFile& ota, const 
     {
         QImage im = readMiniMap(tnt);
         im.setColorTable(palette);
+        resizeToMapDimensions(im, tnt, nominalSize);
+        return im;
+    }
+    else if (type == "heightmap")
+    {
+        QImage im = createHeightMapImage(tnt);
+        resize(im, nominalSize);
+        return im;
+    }
+    else if (type == "heightmap-water")
+    {
+        QImage im = createHeightMapWithWaterImage(tnt);
+        resize(im, nominalSize);
         return im;
     }
     else if (type == "positions")
     {
         return createPositionsMapImage(tnt, ota, palette, maxPositions, nominalSize);
     }
+    else if (type == "positions-overlay")
+    {
+        return createPositionsOverlayImage(tnt, ota, maxPositions, nominalSize);
+    }
     else if (type == "mexes")
     {
         return createResourceMapImage(tnt, ota, allFeatures, maxPositions, Qt::darkRed, Qt::yellow, "indestructible", "1", "metal", 111, nominalSize);
+    }
+    else if (type == "mexes-overlay")
+    {
+        return createResourceOverlayImage(tnt, ota, allFeatures, maxPositions, Qt::darkRed, Qt::yellow, "indestructible", "1", "metal", 111, nominalSize);
     }
     else if (type == "geos")
     {
         return createResourceMapImage(tnt, ota, allFeatures, maxPositions, Qt::darkBlue, Qt::cyan, "indestructible", "1", "geothermal", 1, nominalSize);
     }
+    else if (type == "geos-overlay")
+    {
+        return createResourceOverlayImage(tnt, ota, allFeatures, maxPositions, Qt::darkBlue, Qt::cyan, "indestructible", "1", "geothermal", 1, nominalSize);
+    }
     else if (type == "rocks")
     {
         return createResourceMapImage(tnt, ota, allFeatures, maxPositions, Qt::darkRed, Qt::red, "reclaimable", "1", "metal", 1, nominalSize);
     }
+    else if (type == "rocks-overlay")
+    {
+        return createResourceOverlayImage(tnt, ota, allFeatures, maxPositions, Qt::darkRed, Qt::red, "reclaimable", "1", "metal", 1, nominalSize);
+    }
     else if (type == "trees")
     {
         return createResourceMapImage(tnt, ota, allFeatures, maxPositions, Qt::darkGreen, Qt::green, "reclaimable", "1", "energy", 1, nominalSize);
+    }
+    else if (type == "trees-overlay")
+    {
+        return createResourceOverlayImage(tnt, ota, allFeatures, maxPositions, Qt::darkGreen, Qt::green, "reclaimable", "1", "energy", 1, nominalSize);
     }
     else
     {
@@ -1063,7 +1184,7 @@ std::map<QString,QImage> createMapImages(const std::string& tntData, const std::
 
     for (QString type : types)
     {
-        if (type == "mini")
+        if (type == "mini" || type == "heightmap" || type == "heightmap-water")
         {
             images[type] = createMapImage(tnt, ota, allFeatures, palette, type, 10, nominalSize);
         }
@@ -1111,11 +1232,7 @@ int main(int argc, char *argv[])
 
 #ifdef _WIN32
     LOG_DEBUG("-- app start. default maxstdio=" + std::to_string(_getmaxstdio()));
-#ifdef _DEBUG
-    int maxstdio = 8192;  // debug CRT asserts on values above 8192
-#else
     int maxstdio = 65535;
-#endif
     while (_setmaxstdio(maxstdio) != maxstdio)
     {
         maxstdio = 9 * maxstdio / 10;
@@ -1329,6 +1446,16 @@ int main(int argc, char *argv[])
                 LOG_DEBUG("  unknown exception processing map file " << p.second.archivePath << '/' << p.second.filePath);
                 continue;
             }
+        }
+    }
+
+    std::map<QString, HpiEntry> tntFileNameLookup;
+    for (const auto &p : mapFiles)
+    {
+        QFileInfo fileInfo(p.second.filePath.c_str());
+        if (fileInfo.suffix().toLower() == "tnt")
+        {
+            tntFileNameLookup[fileInfo.baseName()] = p.second;
         }
     }
 
