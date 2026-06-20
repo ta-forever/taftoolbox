@@ -348,21 +348,6 @@ bool isWaterTile(const rwe::TntArchive& tnt, const rwe::TntTileAttributes& tileA
     return tnt.getHeader().seaLevel > 0 && tileAttribute.height < tnt.getHeader().seaLevel;
 }
 
-int calculateWaterPercent(const rwe::TntArchive& tnt)
-{
-    std::vector<rwe::TntTileAttributes> tileAttributes = readTileAttributes(tnt);
-    if (tileAttributes.empty())
-    {
-        return 0;
-    }
-
-    int waterTiles = std::count_if(tileAttributes.begin(), tileAttributes.end(), [&tnt](const rwe::TntTileAttributes& tileAttribute)
-    {
-        return isWaterTile(tnt, tileAttribute);
-    });
-    return int(0.5 + 100.0 * double(waterTiles) / double(tileAttributes.size()));
-}
-
 QImage createHeightMapWithWaterImage(const rwe::TntArchive& tnt)
 {
     const int width = tnt.getHeader().width;
@@ -451,7 +436,7 @@ bool isSkirmishMap(const std::string& otaData)
     return QString(otaData.c_str()).contains("type=network", Qt::CaseInsensitive);
 }
 
-void lsMap(std::ostream& os, const std::string& context, const std::string &hpiArchive, const ta::TdfFile& ota, std::uint32_t crc, int waterPercent)
+void lsMap(std::ostream& os, const std::string& context, const std::string &hpiArchive, const ta::TdfFile& ota, std::uint32_t crc)
 {
     const char UNIT_SEPARATOR = '\x1f';
     const char RECORD_SEPARATOR = '\n';// '\x1e';
@@ -472,7 +457,6 @@ void lsMap(std::ostream& os, const std::string& context, const std::string &hpiA
                 << UNIT_SEPARATOR << tdfRootValues["minwindspeed"] + '-' + tdfRootValues["maxwindspeed"]
                 << UNIT_SEPARATOR << tdfRootValues["tidalstrength"]
                 << UNIT_SEPARATOR << tdfRootValues["gravity"]
-                << UNIT_SEPARATOR << waterPercent
                 << RECORD_SEPARATOR;
             os << ss.str();
             return;
@@ -1248,7 +1232,7 @@ int main(int argc, char *argv[])
 
 #ifdef _WIN32
     LOG_DEBUG("-- app start. default maxstdio=" + std::to_string(_getmaxstdio()));
-    int maxstdio = 8192;
+    int maxstdio = 65535;
     while (_setmaxstdio(maxstdio) != maxstdio)
     {
         maxstdio = 9 * maxstdio / 10;
@@ -1501,23 +1485,6 @@ int main(int argc, char *argv[])
 
                 LOG_DEBUG("  parsing .ota file");
                 ta::TdfFile tdf(data, 1);
-                int waterPercent = 0;
-                try
-                {
-                    auto tntFileIt = tntFileNameLookup.find(fileInfo.baseName());
-                    if (tntFileIt != tntFileNameLookup.end())
-                    {
-                        std::string tntData = hpiLoad(tntFileIt->second);
-                        std::istringstream tntStream(tntData);
-                        rwe::TntArchive tnt(&tntStream);
-                        waterPercent = calculateWaterPercent(tnt);
-                    }
-                }
-                catch (const std::exception& e)
-                {
-                    LOG_DEBUG("  exception calculating water percent for " << fileInfo.baseName().toStdString() << ":" << e.what());
-                }
-
                 if (parser.isSet("sql"))
                 {
                     LOG_DEBUG("  listing file (sql)");
@@ -1526,7 +1493,7 @@ int main(int argc, char *argv[])
                 else
                 {
                     LOG_DEBUG("  listing file (delimited text)");
-                    lsMap(std::cout, fileInfo.baseName().toStdString(), p.second.archivePath, tdf, doHash ? crc : 0u, waterPercent);
+                    lsMap(std::cout, fileInfo.baseName().toStdString(), p.second.archivePath, tdf, doHash ? crc : 0u);
                 }
             }
         }
