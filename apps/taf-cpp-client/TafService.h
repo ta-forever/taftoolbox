@@ -2,11 +2,16 @@
 
 #include <QtCore/qlist.h>
 #include <QtCore/qurl.h>
+#include <QtCore/qjsondocument.h>
+#include <QtCore/qjsonobject.h>
+#include <QtCore/qjsonarray.h>
+#include <QtCore/qjsonvalue.h>
 #include <QtNetwork/qnetworkreply.h>
 
 #include "TafEndpoints.h"
 #include "tafclient/TafLobbyClient.h"
 #include "api/FeaturedModDto.h"
+#include "DownloadService.h"
 
 #include <functional>
 

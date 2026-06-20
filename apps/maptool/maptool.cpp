@@ -202,7 +202,7 @@ QVector<QRgb> loadPalette(const std::string &paletteFile)
 
 void ImageBufferCleanup(void *buf)
 {
-    delete buf;
+    delete static_cast<std::vector<char>*>(buf);
 }
 
 QImage readMiniMap(const rwe::TntArchive& tnt)

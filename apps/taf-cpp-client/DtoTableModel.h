@@ -18,14 +18,14 @@ public:
 
     int columnCount(const QModelIndex& parent = QModelIndex()) const override
     {
-        return int(typename T::Fields::_COLUMN_COUNT);
+        return int(T::Fields::_COLUMN_COUNT);
     }
 
     QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override
     {
         if (index.isValid() && index.row() >= 0 && index.row() < m_items.size() && Qt::DisplayRole == role)
         {
-            return m_items.at(index.row()).get(T::Fields(index.column()));
+            return m_items.at(index.row()).get(static_cast<typename T::Fields>(index.column()));
         }
         return QVariant();
     }
@@ -81,7 +81,7 @@ public:
             {
                 m_items[row] = item;
                 QModelIndex indexFrom = this->index(row, 0);
-                QModelIndex indexTo = this->index(row, int(typename T::Fields::_COLUMN_COUNT) -1);
+                QModelIndex indexTo = this->index(row, int(T::Fields::_COLUMN_COUNT) -1);
                 emit dataChanged(indexFrom, indexTo);
             }
         }
@@ -94,7 +94,7 @@ public:
     void remove(typename T::IdType id)
     {
         int removedRow = m_itemsById.value(id, -1);
-        if (removedRow >= 0 && removedRow < m_games.size())
+        if (removedRow >= 0 && removedRow < m_items.size())
         {
             beginRemoveRows(QModelIndex(), removedRow, removedRow);
             m_items.remove(removedRow);
