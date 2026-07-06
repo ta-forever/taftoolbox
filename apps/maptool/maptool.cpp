@@ -9,6 +9,7 @@
 #include <QtWidgets/qapplication.h>
 #include <QtCore/qcommandlineparser.h>
 #include <QtCore/qdir.h>
+#include <QtCore/qfile.h>
 #include <QtCore/qfileinfo.h>
 #include <QtCore/qelapsedtimer.h>
 #include <QtGui/qimage.h>
@@ -896,6 +897,35 @@ QImage createPositionsOverlayImage(const rwe::TntArchive& tnt, const ta::TdfFile
     return im;
 }
 
+// Emit each start position as one line "n nx ny" where nx,ny are the position's
+// centre normalised to [0,1] over the map's dimensions (same frame the overlay
+// image uses: position x/16,y/16 over tnt header width/height). The client draws
+// its own position markers from this instead of magnifying a rendered overlay.
+QString createStartPositionsData(const std::string& tntData, const std::string& otaData, int positionCount)
+{
+    LOG_DEBUG("[createStartPositionsData]");
+    std::istringstream ss(tntData);
+    rwe::TntArchive tnt(&ss);
+    ta::TdfFile ota(otaData, 10);
+
+    const int mapWidth = tnt.getHeader().width;
+    const int mapHeight = tnt.getHeader().height;
+    const std::vector< std::pair<int, int> > startPositions = getStartingPositions(ota, positionCount);
+
+    QString out;
+    int n = 0;
+    for (const auto& sp : startPositions)
+    {
+        ++n;
+        double nx = mapWidth > 0 ? double(sp.first) / double(mapWidth) : 0.0;
+        double ny = mapHeight > 0 ? double(sp.second) / double(mapHeight) : 0.0;
+        // QString::number uses the C locale (always '.'), so the client's
+        // Double.parseDouble reads it back regardless of the user's locale.
+        out += QString("%1 %2 %3\n").arg(n).arg(QString::number(nx, 'f', 5)).arg(QString::number(ny, 'f', 5));
+    }
+    return out;
+}
+
 QString _engineeringNotation(double x, char k)
 {
     if (x >= 1e15)
@@ -1219,6 +1249,27 @@ void saveMapImages(QFileInfo mapFileInfo, QString directory, const std::map<QStr
     }
 }
 
+// Write the start-position coordinate side-car into "<directory>/positions-coords_<max>/<map>.txt",
+// mirroring saveMapImages' "<directory>/<type>_<max>/<map>.png" layout so the client's cache
+// dir convention finds it.
+void saveStartPositionsData(QFileInfo mapFileInfo, QString directory, int maxPositions, const QString& data)
+{
+    QString subDir = QString("positions-coords_%1").arg(maxPositions);
+    QDir dir(directory + "/" + subDir);
+    if (!dir.exists())
+    {
+        dir.mkpath(".");
+    }
+    QString fileName = directory + "/" + subDir + "/" + mapFileInfo.baseName() + ".txt";
+    LOG_DEBUG("[saveStartPositionsData] fileName=" << fileName.toStdString());
+    QFile file(fileName);
+    if (file.open(QIODevice::WriteOnly | QIODevice::Text))
+    {
+        file.write(data.toUtf8());
+        file.close();
+    }
+}
+
 int main(int argc, char *argv[])
 {
     for (int i = 0; i < argc; ++i)
@@ -1429,10 +1480,34 @@ int main(int argc, char *argv[])
                     }
                     if (parser.isSet("thumb"))
                     {
-                        LOG_DEBUG("  generating map images");
-                        auto images = createMapImages(tntData, otaData, allFeatures, palette, parser.value("thumbtypes").split(','), parser.value("maxpositions").toInt(), parser.value("thumbsize").toInt());
-                        LOG_DEBUG("  saving map images");
-                        saveMapImages(fileInfo, parser.value("thumb"), images);
+                        QStringList thumbTypes = parser.value("thumbtypes").split(',');
+                        const int maxPositions = parser.value("maxpositions").toInt();
+
+                        // Image thumbnails: everything except the coordinate side-car.
+                        QStringList imageTypes;
+                        for (const QString& t : thumbTypes)
+                        {
+                            if (t != "positions-coords")
+                            {
+                                imageTypes.append(t);
+                            }
+                        }
+                        if (!imageTypes.isEmpty())
+                        {
+                            LOG_DEBUG("  generating map images");
+                            auto images = createMapImages(tntData, otaData, allFeatures, palette, imageTypes, maxPositions, parser.value("thumbsize").toInt());
+                            LOG_DEBUG("  saving map images");
+                            saveMapImages(fileInfo, parser.value("thumb"), images);
+                        }
+
+                        // Start-position coordinate side-car (text), consumed by the client
+                        // to draw its own position markers rather than a rendered overlay.
+                        if (thumbTypes.contains("positions-coords"))
+                        {
+                            LOG_DEBUG("  generating start-position coordinates");
+                            QString data = createStartPositionsData(tntData, otaData, maxPositions);
+                            saveStartPositionsData(fileInfo, parser.value("thumb"), maxPositions, data);
+                        }
                     }
                 }
             }
