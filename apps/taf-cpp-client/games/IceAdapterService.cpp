@@ -1,5 +1,6 @@
 #include "IceAdapterService.h"
 
+#include "NativeTools.h"
 #include "preferences/PreferencesService.h"
 #include "taflib/Logger.h"
 
@@ -7,6 +8,7 @@
 #include <QtCore/qjsondocument.h>
 #include <QtCore/qjsonobject.h>
 #include <QtCore/qdir.h>
+#include <QtCore/qfileinfo.h>
 #include <QtCore/qstandardpaths.h>
 #include <QtNetwork/qtcpserver.h>
 
@@ -63,14 +65,28 @@ void IceAdapterService::start(int playerId, int gameUid, QString playerName, int
          << "--rpc-port"   << QString::number(rpcPort)
          << "--gpgnet-port" << QString::number(gpgNetPort);
 
-    qInfo() << "[IceAdapterService::start] java" << args;
+    // prefer a bundled JRE (required under Wine, where no Windows java.exe is
+    // on PATH): first <nativeDir>/jre, then the taf-java-client install layout
+    // where natives/ and jre/ are siblings; fall back to PATH otherwise
+    QString javaExe = "java";
+    for (QString candidate : { nativeDir + "/jre/bin/" + NativeTools::exeName("java"),
+                               nativeDir + "/../jre/bin/" + NativeTools::exeName("java") })
+    {
+        if (QFileInfo(candidate).isFile())
+        {
+            javaExe = QDir::cleanPath(candidate);
+            break;
+        }
+    }
+
+    qInfo() << "[IceAdapterService::start]" << javaExe << args;
 
     m_process = new QProcess(this);
     m_process->setProcessChannelMode(QProcess::MergedChannels);
     QObject::connect(m_process, &QProcess::readyReadStandardOutput, [this]() {
         qDebug() << "[ice-adapter]" << m_process->readAllStandardOutput();
     });
-    m_process->start("java", args);
+    m_process->start(javaExe, args);
 
     m_connectTimer.start();
 }

@@ -1,5 +1,6 @@
 #include "GameLauncherService.h"
 
+#include "NativeTools.h"
 #include "preferences/PreferencesService.h"
 #include "taflib/Logger.h"
 
@@ -62,10 +63,11 @@ void GameLauncherService::registerDplay(QString mod, QString modPath, int gameUi
          << "--gameexe"  << "TotalA.exe"
          << "--logfile"  << logFile;
 
-    qInfo() << "[GameLauncherService::registerDplay]" << talauncherExe << args;
+    QString program = NativeTools::wineWrap(talauncherExe, args);
+    qInfo() << "[GameLauncherService::registerDplay]" << program << args;
 
     QProcess proc;
-    proc.start(talauncherExe, args);
+    proc.start(program, args);
     if (!proc.waitForFinished(10000))
     {
         qWarning() << "[GameLauncherService::registerDplay] timed out";
@@ -83,7 +85,8 @@ void GameLauncherService::startLaunchServer(int port, int gameUid)
     args << "--bindport" << QString::number(port)
          << "--logfile"  << logFile;
 
-    qInfo() << "[GameLauncherService::startLaunchServer]" << talauncherExe << args;
+    QString program = NativeTools::wineWrap(talauncherExe, args);
+    qInfo() << "[GameLauncherService::startLaunchServer]" << program << args;
 
     if (m_launchServer)
     {
@@ -94,14 +97,14 @@ void GameLauncherService::startLaunchServer(int port, int gameUid)
     m_launchServerPort = port;
     m_launchServerLogPath = logFile;
     m_launchServer = new QProcess(this);
-    m_launchServer->start(talauncherExe, args);
+    m_launchServer->start(program, args);
 }
 
 void GameLauncherService::startGpgNet4ta(int gameUid, QString mod, QString modPath,
                                           QString gpgNetUrl, int launchServerPort, int consolePort)
 {
     QDir().mkpath(logDir());
-    QString gpgnet4taExe = nativeDir() + "/bin/gpgnet4ta.exe";
+    QString gpgnet4taExe = nativeDir() + "/bin/" + NativeTools::exeName("gpgnet4ta");
     QString logFile = logDir() + QString("/gpgnet4ta-%1.log").arg(gameUid);
 
     QStringList args;

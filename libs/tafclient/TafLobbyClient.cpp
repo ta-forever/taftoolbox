@@ -262,7 +262,9 @@ void TafLobbyClient::onReadyRead()
             }
             else if (it.value() == "session")
             {
-                emit session(cmd.value("session").toInt());
+                // session ids can exceed int32; toInt() would return 0 and the
+                // server rejects the hello with "bad session id"
+                emit session(qint64(cmd.value("session").toDouble()));
             }
             else if (it.value() == "welcome")
             {

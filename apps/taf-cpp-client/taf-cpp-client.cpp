@@ -17,6 +17,7 @@
 
 #include "DownloadService.h"
 #include "LoginDialog.h"
+#include "NativeTools.h"
 #include "MainWindow.h"
 #include "TafService.h"
 #include "games/GameService.h"
@@ -72,7 +73,7 @@ int doMain(int argc, char* argv[])
 
     QString nativeDir = PreferencesService::getInstance()->getNativeDir();
     QString mapsCache = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/maps";
-    MapTool::initialise(nativeDir + "/bin/maptool.exe", mapsCache);
+    MapTool::initialise(nativeDir + "/bin/" + NativeTools::exeName("maptool"), mapsCache);
 
     TafService::initialise(&app);
     GameService::initialise(&app);

@@ -40,6 +40,11 @@ void LoginDialog::on_loginButton_clicked()
     }
 }
 
+void LoginDialog::on_quitButton_clicked()
+{
+    close();
+}
+
 void LoginDialog::on_environmentBox_currentIndexChanged(QString name)
 {
     qInfo() << "[LoginDialog::on_environmentBox_currentIndexChanged]" << name;

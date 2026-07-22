@@ -25,6 +25,8 @@ target_link_libraries(taf-cpp-client
     Qt5::Network
     Qt5::Widgets)
 
+install(TARGETS taf-cpp-client)
+
 # ---------------------------------------------------------------------------
 # Locate Qt bin and plugins directories for debugger PATH injection below.
 #

@@ -23,6 +23,7 @@ signals:
 
 private slots:
     void on_loginButton_clicked();
+    void on_quitButton_clicked();
     void on_environmentBox_currentIndexChanged(QString);
     void on_extraOptionsToggle_clicked();
 

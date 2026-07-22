@@ -1,5 +1,6 @@
 #include "TafService.h"
 #include "DownloadService.h"
+#include "NativeTools.h"
 #include <QtNetwork/qnetworkrequest.h>
 #include <QtNetwork/qnetworkreply.h>
 #include <QtCore/qcoreapplication.h>
@@ -40,7 +41,7 @@ TafService::TafService(QObject *parent):
                 m_tafLobbyClient.sendHello(sessionId, "0", "0.0.0.0", login, password);
                 uidProcess->deleteLater();
             });
-        uidProcess->start(nativeDir + "/faf-uid.exe", QStringList() << QString::number(sessionId));
+        uidProcess->start(nativeDir + "/" + NativeTools::exeName("faf-uid"), QStringList() << QString::number(sessionId));
     });
 }
 

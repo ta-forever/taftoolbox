@@ -1,6 +1,8 @@
 set(CMAKE_AUTOMOC ON)
 
-add_library(tafclient
+# STATIC: PMF signal connects (e.g. TafLobbyClient::session) fail across a
+# MinGW DLL boundary because the class has no export macros
+add_library(tafclient STATIC
     TafLobbyClient.h
     TafLobbyClient.cpp
     TafLobbyJsonProtocol.h
