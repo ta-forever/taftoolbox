@@ -23,13 +23,15 @@ MapTool::MapTool(QString mapToolExePath, QString cacheDirectory):
     m_mapToolExePath(mapToolExePath),
     m_cacheDirectory(cacheDirectory)
 {
+    // missing maptool degrades map listing/previews but should not be fatal to
+    // the whole client (it used to throw here, killing startup)
     if (!QFile(mapToolExePath).exists())
     {
-        throw std::runtime_error(QString("No MapTool not found at path '%1'").arg(mapToolExePath).toStdString());
+        qWarning() << "[MapTool] maptool not found at" << mapToolExePath << "- map listing and previews will be unavailable";
     }
     if (!QDir().mkpath(cacheDirectory))
     {
-        throw std::runtime_error(QString("Unable to create cache path '%1'").arg(cacheDirectory).toStdString());
+        qWarning() << "[MapTool] unable to create cache path" << cacheDirectory;
     }
 }
 

@@ -112,7 +112,7 @@
          </property>
          <property name="font">
           <font>
-           <family>Segoe UI</family>
+           <family>DejaVu Sans</family>
            <pointsize>9</pointsize>
           </font>
          </property>

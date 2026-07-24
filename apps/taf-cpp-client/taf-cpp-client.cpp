@@ -8,6 +8,7 @@
 #include <QtNetwork/qnetworkreply.h>
 #include <QtNetwork/qtcpserver.h>
 #include <QtNetwork/qtcpsocket.h>
+#include <QtGui/qfontdatabase.h>
 #include <QtWidgets/qapplication.h>
 
 #include "gpgnet/GpgNetParse.h"
@@ -37,6 +38,14 @@ int doMain(int argc, char* argv[])
     QApplication::setOrganizationName("TA Forever");
     QApplication::setApplicationName("taf-cpp-client");
     QApplication::setApplicationVersion("0.14.11");
+
+    // bundle our own font so rendering doesn't depend on Windows system fonts
+    // (Segoe UI/Verdana are absent under Wine/CrossOver and its fallback is ugly)
+    if (QFontDatabase::addApplicationFont(":/res/fonts/DejaVuSans.ttf") >= 0)
+    {
+        QFontDatabase::addApplicationFont(":/res/fonts/DejaVuSans-Bold.ttf");
+        QApplication::setFont(QFont("DejaVu Sans", 9));
+    }
 
     QCommandLineParser parser;
     parser.setApplicationDescription("TA Forever c++ Client");
@@ -86,13 +95,25 @@ int doMain(int argc, char* argv[])
     MainWindow mainWindow;
     LoginDialog *loginDialog = new LoginDialog(&mainWindow);
 
-    QObject::connect(loginDialog, &LoginDialog::loginRequested, [](QString username, QString password, const TafEndpoints& endpoints) {
+    QObject::connect(loginDialog, &LoginDialog::loginRequested, [loginDialog](QString username, QString password, const TafEndpoints& endpoints) {
+        loginDialog->showStatus("Connecting...");
         TafService::getInstance()->setTafEndpoints(endpoints);
         TafService::getInstance()->getTafLobbyClient()->connectToHost(endpoints.lobbyHost, endpoints.lobbyPort);
     });
     QObject::connect(TafService::getInstance()->getTafLobbyClient(), &TafLobbyClient::welcome, [&loginDialog, &mainWindow](QSharedPointer<TafLobbyPlayerInfo> playerInfo) {
         loginDialog->hide();
         mainWindow.show();
+    });
+    // login failures used to be log-only, leaving the dialog looking like
+    // "nothing happened" — show them on the login banner instead
+    QObject::connect(TafService::getInstance()->getTafLobbyClient(), &TafLobbyClient::authenticationFailed, [loginDialog](QString text) {
+        loginDialog->showStatus(text);
+    });
+    QObject::connect(TafService::getInstance()->getTafLobbyClient(), &TafLobbyClient::notice, [loginDialog, &mainWindow](QString style, QString text) {
+        if (style == "error" && !mainWindow.isVisible())
+        {
+            loginDialog->showStatus(text);
+        }
     });
 
     TafService::getInstance()->getDfcConfig(parser.value("serverConfigUrl"), [loginDialog](QSharedPointer<DtoTableModel<TafEndpoints> > endpointsTableModel) {

@@ -17,6 +17,7 @@ public:
     ~LoginDialog();
 
     void setTafEndpoints(QSharedPointer<DtoTableModel<TafEndpoints> >);
+    void showStatus(QString text);
 
 signals:
     void loginRequested(QString userName, QString password, const TafEndpoints &endpoints);
@@ -24,6 +25,9 @@ signals:
 private slots:
     void on_loginButton_clicked();
     void on_quitButton_clicked();
+    void on_newAccountButton_clicked();
+    void on_renameAccountButton_clicked();
+    void on_forgotPasswordButton_clicked();
     void on_environmentBox_currentIndexChanged(QString);
     void on_extraOptionsToggle_clicked();
 

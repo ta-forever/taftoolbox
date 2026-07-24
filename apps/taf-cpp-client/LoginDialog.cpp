@@ -3,6 +3,8 @@
 #include "taflib/Logger.h"
 
 #include <QtCore/qsettings.h>
+#include <QtCore/qurl.h>
+#include <QtGui/qdesktopservices.h>
 #include <QtCore/qfile.h>
 #include <QtCore/qjsondocument.h>
 #include <QtCore/qjsonobject.h>
@@ -40,9 +42,29 @@ void LoginDialog::on_loginButton_clicked()
     }
 }
 
+void LoginDialog::showStatus(QString text)
+{
+    m_ui->headerBottom->setText(text);
+}
+
 void LoginDialog::on_quitButton_clicked()
 {
     close();
+}
+
+void LoginDialog::on_newAccountButton_clicked()
+{
+    QDesktopServices::openUrl(QUrl("https://www.taforever.com/account/register"));
+}
+
+void LoginDialog::on_renameAccountButton_clicked()
+{
+    QDesktopServices::openUrl(QUrl("https://www.taforever.com/account/username/change"));
+}
+
+void LoginDialog::on_forgotPasswordButton_clicked()
+{
+    QDesktopServices::openUrl(QUrl("https://www.taforever.com/account/password/reset"));
 }
 
 void LoginDialog::on_environmentBox_currentIndexChanged(QString name)

@@ -132,7 +132,7 @@ void MapService::_getPreviewFromServer(QString mapName, MapPreviewType previewTy
 void MapService::_getPreviewFromGamePath(QString mapName, MapPreviewType previewType, int positionCount, QString featuredMod,
     std::function<void(QString)> callback)
 {
-    QString gamePath = ModService::getInstance()->getModPath(featuredMod);
+    QString gamePath = ModService::getInstance()->getModPath(featuredMod, false);
     if (gamePath.isEmpty())
     {
         callback(QString());

@@ -10,9 +10,13 @@
 
 #include "taflib/Logger.h"
 
+#include "preferences/PreferencesService.h"
+
 #include "QtCore/qjsonarray.h"
 #include "QtCore/qjsondocument.h"
 #include "QtCore/qjsonobject.h"
+#include "QtCore/qrandom.h"
+#include "QtWidgets/qfiledialog.h"
 #include "QtCore/qsortfilterproxymodel.h"
 #include "QtGui/qpixmap.h"
 
@@ -110,6 +114,40 @@ void GameCreateDialog::on_createPushButton_clicked(bool)
         title, m_ui->passwordLineEdit->text(), selectedMod->technicalName, selectedMap->name,
         m_ui->friendsOnlyCheckBox->isChecked() ? "friends" : "public",
         300, "global"));
+    close();
+}
+
+void GameCreateDialog::on_closePushButton_clicked(bool)
+{
+    close();
+}
+
+void GameCreateDialog::on_modLocationPushButton_clicked(bool)
+{
+    const FeaturedModDto* selectedMod = _getSelectedMod();
+    if (!selectedMod)
+    {
+        return;
+    }
+    QString path = QFileDialog::getExistingDirectory(
+        this,
+        QString("Locate %1 game installation folder (the folder containing TotalA.exe)").arg(selectedMod->technicalName));
+    if (!path.isEmpty())
+    {
+        PreferencesService::getInstance()->setModPath(selectedMod->technicalName, path);
+        populateMapList();
+    }
+}
+
+void GameCreateDialog::on_randomMapPushButton_clicked(bool)
+{
+    int rowCount = m_mapListProxyModel.rowCount();
+    if (rowCount > 0)
+    {
+        int row = QRandomGenerator::global()->bounded(rowCount);
+        m_ui->mapListView->setCurrentIndex(
+            m_mapListProxyModel.index(row, int(MapToolDto::Fields::NameStr)));
+    }
 }
 
 void GameCreateDialog::populateMapList()

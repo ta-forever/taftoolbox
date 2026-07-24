@@ -4,6 +4,7 @@
 #include <QtNetwork/qnetworkrequest.h>
 #include <QtNetwork/qnetworkreply.h>
 #include <QtCore/qcoreapplication.h>
+#include <QtCore/qfileinfo.h>
 #include <QtCore/qprocess.h>
 #include <QtCore/qjsondocument.h>
 #include <QtCore/qjsonobject.h>
@@ -27,6 +28,22 @@ TafService::TafService(QObject *parent):
         QString password = QCryptographicHash::hash(loginPreferences.getPassword().toUtf8(), QCryptographicHash::Sha256).toHex();
         QString login    = loginPreferences.getUserName();
 
+        // the java-client install puts faf-uid at the natives root, but the
+        // standalone release archives put everything under bin/ — accept either
+        QStringList uidCandidates = {
+            nativeDir + "/" + NativeTools::exeName("faf-uid"),
+            nativeDir + "/bin/" + NativeTools::exeName("faf-uid"),
+        };
+        QString uidExe = uidCandidates.first();
+        for (const QString& candidate : uidCandidates)
+        {
+            if (QFileInfo(candidate).isFile())
+            {
+                uidExe = candidate;
+                break;
+            }
+        }
+
         QProcess* uidProcess = new QProcess(this);
         QObject::connect(uidProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
             [this, uidProcess, sessionId, login, password](int, QProcess::ExitStatus) {
@@ -36,12 +53,13 @@ TafService::TafService(QObject *parent):
                 uidProcess->deleteLater();
             });
         QObject::connect(uidProcess, &QProcess::errorOccurred,
-            [this, uidProcess, sessionId, login, password](QProcess::ProcessError) {
-                qWarning() << "[TafService] faf-uid failed to start";
+            [this, uidProcess, sessionId, login, password, uidExe](QProcess::ProcessError) {
+                qWarning() << "[TafService] faf-uid failed to start:" << uidExe << "-" << uidProcess->errorString();
                 m_tafLobbyClient.sendHello(sessionId, "0", "0.0.0.0", login, password);
                 uidProcess->deleteLater();
             });
-        uidProcess->start(nativeDir + "/" + NativeTools::exeName("faf-uid"), QStringList() << QString::number(sessionId));
+        qInfo() << "[TafService] running uid generator:" << uidExe;
+        uidProcess->start(uidExe, QStringList() << QString::number(sessionId));
     });
 }
 

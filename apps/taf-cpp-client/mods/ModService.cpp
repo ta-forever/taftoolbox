@@ -22,16 +22,19 @@ ModService::ModService()
 {
 }
 
-QString ModService::getModPath(QString featuredMod)
+QString ModService::getModPath(QString featuredMod, bool promptIfMissing)
 {
     QString path = PreferencesService::getInstance()->getModPath(featuredMod);
     if (!path.isEmpty() && QDir(path).exists())
         return path;
 
+    if (!promptIfMissing)
+        return QString();
+
     qInfo() << "[ModService::getModPath] no saved path for" << featuredMod << "- prompting user";
     path = QFileDialog::getExistingDirectory(
         nullptr,
-        QString("Locate %1 game installation folder").arg(featuredMod));
+        QString("Locate %1 game installation folder (the folder containing TotalA.exe)").arg(featuredMod));
     if (!path.isEmpty())
         PreferencesService::getInstance()->setModPath(featuredMod, path);
     return path;

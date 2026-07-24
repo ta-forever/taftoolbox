@@ -1,6 +1,7 @@
 #include "PreferencesService.h"
 
 #include <QtCore/qcoreapplication.h>
+#include <QtCore/qdir.h>
 #include <QtCore/qstandardpaths.h>
 
 PreferencesService* PreferencesService::m_instance = NULL;
@@ -37,7 +38,19 @@ void PreferencesService::setModPath(QString featuredMod, QString path)
 
 QString PreferencesService::getNativeDir()
 {
-    return m_settings.value("nativeDir", QCoreApplication::applicationDirPath()).toString();
+    QString stored = m_settings.value("nativeDir").toString();
+    if (!stored.isEmpty())
+    {
+        return stored;
+    }
+    // default: the exe normally lives in <natives>/bin, but the natives base
+    // dir (faf-uid, faf-ice-adapter.jar, bin/) is its parent
+    QDir dir(QCoreApplication::applicationDirPath());
+    if (dir.dirName() == "bin")
+    {
+        dir.cdUp();
+    }
+    return dir.absolutePath();
 }
 
 void PreferencesService::setNativeDir(QString path)

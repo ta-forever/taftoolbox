@@ -24,6 +24,9 @@ public slots:
     void onSelectedModChanged(const QModelIndex& current, const QModelIndex& previous);
     void onSelectedMapChanged(const QModelIndex& current, const QModelIndex& previous);
     void on_createPushButton_clicked(bool);
+    void on_closePushButton_clicked(bool);
+    void on_modLocationPushButton_clicked(bool);
+    void on_randomMapPushButton_clicked(bool);
 
 private:
     QSharedPointer<Ui::GameCreateDialog> m_ui;

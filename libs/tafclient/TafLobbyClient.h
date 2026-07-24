@@ -87,6 +87,7 @@ public:
 signals:
     void connectionStateChanged(bool connected);
     void notice(QString style, QString text);
+    void authenticationFailed(QString text);
     void session(qint64 sessionId);
     void welcome(QSharedPointer<TafLobbyPlayerInfo> playerInfo);
     void playerInfo(QSharedPointer<TafLobbyPlayerInfo> playerInfo);

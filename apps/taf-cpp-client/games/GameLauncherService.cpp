@@ -25,7 +25,8 @@ GameLauncherService::GameLauncherService(QObject* parent) :
     QObject(parent)
 {
     QObject::connect(&m_keepaliveTimer, &QTimer::timeout, [this]() {
-        sendConsoleCommand("/keepalive", m_consolePort);
+        if (m_consolePort > 0)
+            sendConsoleCommand("/keepalive", m_consolePort);
         if (m_launchServerPort > 0)
             sendConsoleCommand("/keepalive", m_launchServerPort);
     });
@@ -98,6 +99,12 @@ void GameLauncherService::startLaunchServer(int port, int gameUid)
     m_launchServerLogPath = logFile;
     m_launchServer = new QProcess(this);
     m_launchServer->start(program, args);
+
+    // keepalive talauncher from t=0: it kills itself after 10s without one, and
+    // gpgnet4ta doesn't connect to it until the ice adapter's JVM has booted —
+    // which can take well over 10s on a cold start (esp. under Wine/CrossOver)
+    m_keepaliveTimer.setInterval(1000);
+    m_keepaliveTimer.start();
 }
 
 void GameLauncherService::startGpgNet4ta(int gameUid, QString mod, QString modPath,
@@ -153,6 +160,7 @@ void GameLauncherService::stopAll()
 {
     m_keepaliveTimer.stop();
     m_launchServerPort = 0;
+    m_consolePort = 0;
     m_gpgNet4taLogPath.clear();
     m_launchServerLogPath.clear();
 

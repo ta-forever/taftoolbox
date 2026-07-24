@@ -266,6 +266,10 @@ void TafLobbyClient::onReadyRead()
                 // server rejects the hello with "bad session id"
                 emit session(qint64(cmd.value("session").toDouble()));
             }
+            else if (it.value() == "authentication_failed")
+            {
+                emit authenticationFailed(cmd.value("text").toString());
+            }
             else if (it.value() == "welcome")
             {
                 emit welcome(QSharedPointer<TafLobbyPlayerInfo>::create(cmd.value("me").toObject()));

@@ -8,7 +8,10 @@ public:
     static ModService* initialise();
     static ModService* getInstance();
 
-    QString getModPath(QString featuredMod);
+    // promptIfMissing: only pass true on a deliberate user action (launching a
+    // game, hosting) — passive callers (map preview rendering) must not pop a
+    // folder picker at the user
+    QString getModPath(QString featuredMod, bool promptIfMissing = true);
 
 private:
     ModService();

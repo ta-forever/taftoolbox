@@ -2,6 +2,8 @@
 <qresource>
     <file>MainWindow.css</file>
     <file>LoginDialog.css</file>
+    <file>res/fonts/DejaVuSans.ttf</file>
+    <file>res/fonts/DejaVuSans-Bold.ttf</file>
     <file>res/images/client/</file>
     <file>res/games/</file>
     <file>res/games/formatters/</file>
